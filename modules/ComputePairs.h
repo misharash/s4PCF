@@ -127,7 +127,6 @@ void compute_pairs(Grid *grid, Float rmin, Float rmax, Float rmin_long, Float rm
     	    for (delta.x = -maxsep_long; delta.x <= maxsep_long; delta.x++)
 	        for (delta.y = -maxsep_long; delta.y <= maxsep_long; delta.y++)
 	            for (delta.z = -maxsep_long; delta.z <= maxsep_long; delta.z++) {
-		        const int samecell = (delta.x==0&&delta.y==0&&delta.z==0)?1:0;
 
                         // Check that the cell is in the grid!
                         int tmp_test = grid->test_cell(prim_id+delta);
@@ -145,7 +144,7 @@ void compute_pairs(Grid *grid, Float rmin, Float rmax, Float rmin_long, Float rm
 		        // Now loop over the particles in this secondary cell
                         for (int k = sec.start; k<sec.start+sec.np; k++) {
 		            // Now we're considering these two particles!
-		            if (samecell&&j==k) continue;   // Exclude self-count
+		            if (j <= k) continue;   // Exclude self-count and secondary points whose pairs have not been computed yet
 		            if (mloaded && grid->p[k].w>=0) continue;
 		    	    // This particle has already been included in the file we loaded.
 		            Float3 dx = grid->p[k].pos - ppos;
