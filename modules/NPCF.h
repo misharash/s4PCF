@@ -201,7 +201,7 @@ int dct = 0;
       for(int j=0, bin_index=0; j<NBIN; j++){
         // Iterate over final bin and advance the 4PCF array counter
         for(int k=j+1; k<NBIN; k++){
-          fourpcf[bin_long*N3PCF+bin_index++] += pair1->xi0[j] * pair2->xi0[k];
+          fourpcf[bin_long*N3PCF+bin_index++] += pair1->xi0[j] * pair2->xi0[k] + pair1->xi0[k] * pair2->xi0[j];
         }
       }
       //End of radial binning loops
