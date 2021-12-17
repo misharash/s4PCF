@@ -27,7 +27,7 @@ int dct = 0;
     STimer BinTimer4;
 
 // Sizes of 4pcf array
-#define N4PCF NBIN*NBIN*(NBIN-1)/2
+#define N4PCF NBIN_LONG*NBIN*(NBIN-1)/2
 
     // Array to hold the 4PCF (some bins will violate triangle condition / parity and be empty
     Float fourpcf[N4PCF];
@@ -134,8 +134,8 @@ int dct = 0;
         fprintf(OutFile2,"## Format: Row 1 = radial bin 1, Row 2 = radial bin 2, Row 3 = radial bin 3, Rows 4+ = zeta_l1l2l3^abc\n");
 
         // First print the indices of the radial bins
-        for(int i=0;i<NBIN;i++){
-          for(int j=i+1; j<NBIN; j++){
+        for(int i=0;i<NBIN_LONG;i++){
+          for(int j=0; j<NBIN; j++){
             for(int k=j+1; k<NBIN; k++){
               fprintf(OutFile2,"%2d\t",i);
             }
@@ -143,8 +143,8 @@ int dct = 0;
         }
         fprintf(OutFile2,"\n");
 
-        for(int i=0;i<NBIN;i++){
-          for(int j=i+1; j<NBIN; j++){
+        for(int i=0;i<NBIN_LONG;i++){
+          for(int j=0; j<NBIN; j++){
             for(int k=j+1; k<NBIN; k++){
               fprintf(OutFile2,"%2d\t",j);
             }
@@ -152,8 +152,8 @@ int dct = 0;
         }
         fprintf(OutFile2,"\n");
 
-        for(int i=0;i<NBIN;i++){
-          for(int j=i+1; j<NBIN; j++){
+        for(int i=0;i<NBIN_LONG;i++){
+          for(int j=0; j<NBIN; j++){
             for(int k=j+1; k<NBIN; k++){
               fprintf(OutFile2,"%2d\t",k);
             }
@@ -161,7 +161,7 @@ int dct = 0;
         }
         fprintf(OutFile2,"\n");
 
-        // Now print the 4PCF, ell-by-ell.
+        // Now print the 4PCF.
         for (int i=0;i<N4PCF;i++) fprintf(OutFile2,"%le\t",fourpcf[i]);
         fprintf(OutFile2,"\n");
         fflush(NULL);
