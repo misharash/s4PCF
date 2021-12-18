@@ -12,16 +12,15 @@ class NPCF {
     STimer BinTimer3;
 
 // Array to hold the 3PCF
-#define N3PCF (NBIN * (NBIN - 1) / 2)  // only compute bin1 < bin2
+#define N3PCF (NBIN * (NBIN + 1) / 2)  // only compute bin1 <= bin2
     Float threepcf[N3PCF];
 
     STimer BinTimer4;
 
 // Sizes of 4pcf array
-#define N4PCF NBIN_LONG* NBIN*(NBIN - 1) / 2
+#define N4PCF NBIN_LONG* NBIN*(NBIN + 1) / 2
 
-    // Array to hold the 4PCF (some bins will violate triangle condition /
-    // parity and be empty
+    // Array to hold the 4PCF
     Float fourpcf[N4PCF];
 
     void reset() {
@@ -88,24 +87,22 @@ class NPCF {
 
         // First print the indices of the first radial bin
         for (int i = 0; i < NBIN; i++) {
-            for (int j = i + 1; j < NBIN; j++)
+            for (int j = i; j < NBIN; j++)
                 fprintf(OutFile, "%2d\t", i);
         }
         fprintf(OutFile, " \n");
 
         // Print the indices of the second radial bin
         for (int i = 0; i < NBIN; i++) {
-            for (int j = i + 1; j < NBIN; j++)
+            for (int j = i; j < NBIN; j++)
                 fprintf(OutFile, "%2d\t", j);
         }
         fprintf(OutFile, "\n");
 
         // Now print the 3PCF
-        for (int i = 0, ct = 0; i < NBIN; i++) {
-            for (int j = i + 1; j < NBIN; j++, ct++) {
-                fprintf(OutFile, "%le\t", threepcf[ct]);
-            }
-        }
+        for (int ct = 0; ct < N3PCF; ct++)
+            fprintf(OutFile, "%le\t", threepcf[ct]);
+        
         fprintf(OutFile, "\n");
 
         fflush(NULL);
@@ -139,7 +136,7 @@ class NPCF {
             // First print the indices of the radial bins
             for (int i = 0; i < NBIN_LONG; i++) {
                 for (int j = 0; j < NBIN; j++) {
-                    for (int k = j + 1; k < NBIN; k++) {
+                    for (int k = j; k < NBIN; k++) {
                         fprintf(OutFile2, "%2d\t", i);
                     }
                 }
@@ -148,7 +145,7 @@ class NPCF {
 
             for (int i = 0; i < NBIN_LONG; i++) {
                 for (int j = 0; j < NBIN; j++) {
-                    for (int k = j + 1; k < NBIN; k++) {
+                    for (int k = j; k < NBIN; k++) {
                         fprintf(OutFile2, "%2d\t", j);
                     }
                 }
@@ -157,7 +154,7 @@ class NPCF {
 
             for (int i = 0; i < NBIN_LONG; i++) {
                 for (int j = 0; j < NBIN; j++) {
-                    for (int k = j + 1; k < NBIN; k++) {
+                    for (int k = j; k < NBIN; k++) {
                         fprintf(OutFile2, "%2d\t", k);
                     }
                 }
@@ -184,7 +181,7 @@ class NPCF {
         BinTimer3.Start();
 
         for (int i = 0, ct = 0; i < NBIN; i++) {
-            for (int j = i + 1; j < NBIN; j++, ct++) {
+            for (int j = i; j < NBIN; j++, ct++) {
                 threepcf[ct] = pairs->xi0[i] * pairs->xi0[j] / wp;
             }
         }
@@ -202,7 +199,7 @@ class NPCF {
         // Iterate over second bin
         for (int j = 0, bin_index = 0; j < NBIN; j++) {
             // Iterate over final bin and advance the 4PCF array counter
-            for (int k = j + 1; k < NBIN; k++) {
+            for (int k = j; k < NBIN; k++) {
                 fourpcf[bin_long * N3PCF + bin_index++] +=
                     pair1->xi0[j] * pair2->xi0[k] +
                     pair1->xi0[k] * pair2->xi0[j];
