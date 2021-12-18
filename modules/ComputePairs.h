@@ -160,21 +160,21 @@ void compute_pairs(Grid* grid,
                                                     if ((j==l) || (k==l))
                                                         continue;  // Exclude self-count
                                                     Float3 dx = grid->p[l].pos - ppos;
-                                                    Float norm2 = dx.norm2();
+                                                    Float norm_2 = dx.norm2();
                                                     Float3 dx_l = grid->p[l].pos - grid->p[k].pos;
                                                     Float norm_l2 = dx_l.norm2();
                                                     // Check if this is in the correct binning
                                                     // ranges
-                                                    if (norm2 < rmax2 && norm2 > rmin2 && norm_l2 < rmax_long2 && norm_l2 > rmin_long2)
+                                                    if (norm_2 < rmax2 && norm_2 > rmin2 && norm_l2 < rmax_long2 && norm_l2 > rmin_long2)
                                                         cnt3++;
                                                     else
                                                         continue;
 
                                                     // Now what do we want to do with the pair?
-                                                    norm2 = sqrt(norm2);  // Now just radius
+                                                    norm_2 = sqrt(norm_2);  // Now just radius
                                                     norm_l2 = sqrt(norm_l2);
                                                     // Find the radial bins
-                                                    int bin2 = floor((norm2 - rmin) / (rmax - rmin) *
+                                                    int bin2 = floor((norm_2 - rmin) / (rmax - rmin) *
                                                                     NBIN);
                                                     // if (bin2 < bin) continue; // count triples only in one order
                                                     int bin_long = floor((norm_l2 - rmin_long) / (rmax_long - rmin_long) *
@@ -187,6 +187,15 @@ void compute_pairs(Grid* grid,
                                             }      // Done with this delta.z loop
                                     // done with delta.y loop
                                     // done with delta.x loop
+                                }
+
+                                // Exclude triple-side self-counts from 4PCF
+                                if (rmin_long < rmax) {
+                                    if (norm2 >= rmax_long2 || norm2 <= rmin_long2)
+                                        continue;
+                                    int bin_long = floor((norm2 - rmin_long) / (rmax_long - rmin_long) *
+                                                    NBIN_LONG);
+                                    npcf[thread].excl_4pcf_tripleside(bin_long, bin, grid->p[k].w * primary_w);
                                 }
                             }  // Done with this secondary particle
                         }      // Done with this delta.z loop
