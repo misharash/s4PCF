@@ -13,7 +13,7 @@ class NPCF {
 #define N3PCF (NBIN * (NBIN + 1) / 2)  // only compute bin1 <= bin2
     Float threepcf[N3PCF];
 
-    STimer AddTimer4;
+    STimer AddTimer4, ExclTimer4_doubleside;
 
 // Sizes of 4pcf array
 #define N4PCF NBIN_LONG* NBIN*(NBIN + 1) / 2
@@ -56,6 +56,7 @@ class NPCF {
         printf("\n# Single CPU Timings");
         printf("\n3PCF self-counts exclusion: %.3f s", ExclTimer3.Elapsed());
         printf("\n3PCF addition: %.3f s", AddTimer3.Elapsed());
+        printf("\n4PCF double-side self-counts exclusion: %.3f s", ExclTimer4_doubleside.Elapsed());
         printf("\n4PCF addition: %.3f s", AddTimer4.Elapsed());
         printf("\n");
     }
@@ -128,7 +129,7 @@ class NPCF {
             fprintf(OutFile2, "## Maximum Radius for long side = %.2e\n",
                     rmax_long);
             fprintf(OutFile2,
-                    "## Format: Row 1 = radial bin 1, Row 2 = radial bin 2, "
+                    "## Format: Row 1 = radial bin 1 (long side), Row 2 = radial bin 2, "
                     "Row 3 = radial bin 3, Rows 4+ = zeta_l1l2l3^abc\n");
 
             // First print the indices of the radial bins
@@ -200,6 +201,28 @@ class NPCF {
         }
 
         AddTimer3.Stop();
+
+        return;
+    }
+
+    inline void excl_4pcf_doubleside(Pairs* pair, int bin_long, int bin, Float wprod) {
+        // COMPUTE 4PCF CONTRIBUTIONS
+
+        ExclTimer4_doubleside.Start();
+
+        // Iterate over second bin
+        for (int bin2 = 0; bin2 <= bin; bin2++) {
+            int i = bin2, j = bin; // i <= j
+            int index = j + NBIN*i - i * (i-1) / 2;
+            fourpcf[bin_long * N3PCF + index] -= pair->xi0[bin2] * wprod;
+        }
+        for (int bin2 = bin + 1; bin2 < NBIN; bin2++) {
+            int i = bin, j = bin2; // i < j
+            int index = j + NBIN*i - i * (i-1) / 2;
+            fourpcf[bin_long * N3PCF + index] -= pair->xi0[bin2] * wprod;
+        }
+        // End of radial binning loops
+        ExclTimer4_doubleside.Stop();
 
         return;
     }

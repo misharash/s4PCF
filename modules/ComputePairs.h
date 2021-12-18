@@ -148,6 +148,71 @@ void compute_pairs(Grid* grid,
                     powertime.Start();
                 }
 
+                // Now exclude 4pcf double-side self-counts
+                if (rmin_long < rmax) {
+                    for (delta.x = -maxsep; delta.x <= maxsep; delta.x++)
+                        for (delta.y = -maxsep; delta.y <= maxsep; delta.y++)
+                            for (delta.z = -maxsep; delta.z <= maxsep; delta.z++) {
+                                const int samecell =
+                                    (delta.x == 0 && delta.y == 0 && delta.z == 0)
+                                        ? 1
+                                        : 0;
+
+                                // Check that the cell is in the grid!
+                                int tmp_test = grid->test_cell(prim_id + delta);
+                                if (tmp_test < 0)
+                                    continue;
+                                Cell sec = grid->c[tmp_test];
+
+                                // Define primary position
+                                Float3 ppos = grid->p[j].pos;
+#ifdef PERIODIC
+                                ppos -= grid->cell_sep(delta);
+#endif
+
+                                // This is the position of the particle as viewed
+                                // from the secondary cell. Now loop over the
+                                // particles in this secondary cell
+                                for (int k = sec.start; k < sec.start + sec.np;
+                                    k++) {
+                                    // Now we're considering these two particles!
+                                    if (samecell && j == k)
+                                        continue;  // Exclude self-count
+                                    if (mloaded && grid->p[k].w >= 0)
+                                        continue;
+                                    // This particle has already been included in
+                                    // the file we loaded.
+                                    Float3 dx = grid->p[k].pos - ppos;
+                                    Float norm2 = dx.norm2();
+                                    // Check if this is in the correct binning
+                                    // ranges
+                                    if (norm2 >= rmax2 || norm2 <= rmin2)
+                                        continue;
+
+                                    // Now what do we want to do with the pair?
+                                    norm2 = sqrt(norm2);  // Now just radius
+                                    // Find the radial bin
+                                    int bin = floor((norm2 - rmin) / (rmax - rmin) *
+                                                    NBIN);
+
+                                    // Define x/r,y/r,z/r
+                                    dx = dx / norm2;
+
+                                    // continue;   // Skip pairs and multipoles
+
+                                    // Exclude self-counts from 4PCF
+                                    if (norm2 >= rmax_long2 || norm2 <= rmin_long2)
+                                        continue;
+                                    // Find the radial bin for long side
+                                    int bin_long = floor((norm2 - rmin_long) / (rmax_long - rmin_long) *
+                                                    NBIN_LONG);
+                                    npcf[thread].excl_4pcf_doubleside(pairs_i + j, bin_long, bin, grid->p[k].w * primary_w);
+                                }  // Done with this secondary particle
+                            }      // Done with this delta.z loop
+                    // done with delta.y loop
+                    // done with delta.x loop
+                }
+
                 // Now combine pair counts into 3pcf counts
                 npcf[thread].add_3pcf(pairs_i + j, primary_w);
 
