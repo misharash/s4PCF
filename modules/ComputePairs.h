@@ -138,6 +138,8 @@ void compute_pairs(Grid* grid,
                                                grid->p[k].w * primary_w);
                                 pairs[thread].add(bin, dx.z,
                                                   grid->p[k].w * primary_w);
+                                // Exclude self-counts from 3PCF
+                                npcf[thread].excl_3pcf(bin, grid->p[k].w * grid->p[k].w * primary_w);
                             }  // Done with this secondary particle
                         }      // Done with this delta.z loop
                 // done with delta.y loop

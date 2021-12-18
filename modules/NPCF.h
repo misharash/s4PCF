@@ -7,7 +7,7 @@ class NPCF {
     // This should accumulate the NPCF contributions, for all combination of
     // bins.
    public:
-    STimer AddTimer3;
+    STimer AddTimer3, ExclTimer3;
 
 // Array to hold the 3PCF
 #define N3PCF (NBIN * (NBIN + 1) / 2)  // only compute bin1 <= bin2
@@ -54,6 +54,7 @@ class NPCF {
         /// Report the NPCF timing measurements (for a single CPU).
 
         printf("\n# Single CPU Timings");
+        printf("\n3PCF self-counts exclusion: %.3f s", ExclTimer3.Elapsed());
         printf("\n3PCF addition: %.3f s", AddTimer3.Elapsed());
         printf("\n4PCF addition: %.3f s", AddTimer4.Elapsed());
         printf("\n");
@@ -169,6 +170,21 @@ class NPCF {
 
             printf("4PCF Output saved to %s\n", out_name2);
         }
+    }
+
+    inline void excl_3pcf(int bin, Float wprod) {
+        // wprod is product of weights
+
+        // delete 3PCF self-count
+        ExclTimer3.Start();
+
+        int i = bin, j = bin;
+        int index = j + NBIN*i - i * (i-1) / 2;
+        threepcf[index] -= wprod;
+
+        ExclTimer3.Stop();
+
+        return;
     }
 
     inline void add_3pcf(Pairs* pairs, Float wp) {
