@@ -8,9 +8,10 @@
 #endif
 
 class NPCF {
-// This should accumulate the NPCF contributions, for all combination of bins.
-  public:
-int dct = 0;
+    // This should accumulate the NPCF contributions, for all combination of
+    // bins.
+   public:
+    int dct = 0;
 
     int bincounts[NBIN];
     Float binweight[NBIN];
@@ -18,196 +19,214 @@ int dct = 0;
 
     STimer BinTimer3;
 
-    // Array to hold the 3PCF
-    #define NL (ORDER+1)
-    #define N3PCF (NBIN*(NBIN-1)/2) // only compute bin1 < bin2
+// Array to hold the 3PCF
+#define NL (ORDER + 1)
+#define N3PCF (NBIN * (NBIN - 1) / 2)  // only compute bin1 < bin2
     Float threepcf[N3PCF];
     int nouter3;
 
     STimer BinTimer4;
 
 // Sizes of 4pcf array
-#define N4PCF NBIN_LONG*NBIN*(NBIN-1)/2
+#define N4PCF NBIN_LONG* NBIN*(NBIN - 1) / 2
 
-    // Array to hold the 4PCF (some bins will violate triangle condition / parity and be empty
+    // Array to hold the 4PCF (some bins will violate triangle condition /
+    // parity and be empty
     Float fourpcf[N4PCF];
 
     void reset() {
-	// Zero out the array on construction.
+        // Zero out the array on construction.
 
-    for(int x=0;x<N3PCF;x++) threepcf[x] = 0.0;
+        for (int x = 0; x < N3PCF; x++)
+            threepcf[x] = 0.0;
 
-    // Initialize array to zero
-    for(int x=0;x<N4PCF;x++) fourpcf[x] = 0.0;
+        // Initialize array to zero
+        for (int x = 0; x < N4PCF; x++)
+            fourpcf[x] = 0.0;
 
-	    return;
+        return;
     }
 
     NPCF() {
         reset();
-	return;
+        return;
     }
-    ~NPCF() {
-    }
+    ~NPCF() {}
 
-    void sum_power(NPCF *c) {
-	// Just add up all of the threaded power into the zeroth element
+    void sum_power(NPCF* c) {
+        // Just add up all of the threaded power into the zeroth element
 
-  	for (int i=0; i<NBIN; i++) {
-  	    bincounts[i] += c->bincounts[i];
-  	    binweight[i] += c->binweight[i];
-  }
+        for (int i = 0; i < NBIN; i++) {
+            bincounts[i] += c->bincounts[i];
+            binweight[i] += c->binweight[i];
+        }
 
-  for(int x=0;x<N3PCF;x++) threepcf[x] += c->threepcf[x];
+        for (int x = 0; x < N3PCF; x++)
+            threepcf[x] += c->threepcf[x];
 
-  for(int x=0;x<N4PCF;x++) fourpcf[x] += c->fourpcf[x];
+        for (int x = 0; x < N4PCF; x++)
+            fourpcf[x] += c->fourpcf[x];
     }
 
     void report_timings() {
-      /// Report the NPCF timing measurements (for a single CPU).
+        /// Report the NPCF timing measurements (for a single CPU).
 
-      printf("\n# Single CPU Timings");
-      printf("\nSpherical harmonics: %.3f s",MultTimer.Elapsed());
-      printf("\n3PCF binning: %.3f s",BinTimer3.Elapsed());
-      printf("\n4PCF binning: %.3f s",BinTimer4.Elapsed());
-      printf("\n");
+        printf("\n# Single CPU Timings");
+        printf("\nSpherical harmonics: %.3f s", MultTimer.Elapsed());
+        printf("\n3PCF binning: %.3f s", BinTimer3.Elapsed());
+        printf("\n4PCF binning: %.3f s", BinTimer4.Elapsed());
+        printf("\n");
     }
 
-    void save_power(char* out_string, Float rmin, Float rmax, Float rmin_long, Float rmax_long) {
-      // Print the output NPCF counts to file
+    void save_power(char* out_string,
+                    Float rmin,
+                    Float rmax,
+                    Float rmin_long,
+                    Float rmax_long) {
+        // Print the output NPCF counts to file
 
-      // SAVE 3PCF
+        // SAVE 3PCF
 
-      // First create output files
-       char out_name[1000];
+        // First create output files
+        char out_name[1000];
         snprintf(out_name, sizeof out_name, "output/%s_3pcf.txt", out_string);
-       FILE * OutFile = fopen(out_name,"w");
-
-       // Print some useful information
-       fprintf(OutFile,"## Bins: %d\n",NBIN);
-       fprintf(OutFile,"## Minimum Radius = %.2e\n", rmin);
-       fprintf(OutFile,"## Maximum Radius = %.2e\n", rmax);
-       fprintf(OutFile,"## Format: Row 1 = radial bin 1, Row 2 = radial bin 2, Rows 3+ = zeta_ell^ab\n");
-       fprintf(OutFile,"## Column 1 specifies the angular multipole\n");
-
-       // First print the indices of the first radial bin
-       for(int i=0;i<NBIN;i++){
-         for(int j=i+1; j<NBIN; j++) fprintf(OutFile,"%2d\t",i);
-       }
-       fprintf(OutFile," \n");
-
-       // Print the indices of the second radial bin
-       for(int i=0;i<NBIN;i++){
-         for(int j=i+1; j<NBIN; j++) fprintf(OutFile,"%2d\t",j);
-       }
-       fprintf(OutFile,"\n");
-
-       // Now print the 3PCF
-        for (int i=0, ct=0; i<NBIN; i++){
-          for(int j=i+1; j<NBIN; j++, ct++){
-            fprintf(OutFile,"%le\t",threepcf[ct]);
-          }
-      }
-      fprintf(OutFile,"\n");
-
-       fflush(NULL);
-
-       // Close open files
-       fclose(OutFile);
-
-       printf("3PCF Output saved to %s\n",out_name);
-
-    {
-       // SAVE 4PCF
-
-       // First create output files
-       char out_name2[1000];
-       snprintf(out_name2, sizeof out_name2, "output/%s_4pcf.txt", out_string);
-       FILE * OutFile2 = fopen(out_name2,"w");
+        FILE* OutFile = fopen(out_name, "w");
 
         // Print some useful information
-        fprintf(OutFile2,"## Bins: %d\n",NBIN);
-        fprintf(OutFile2,"## Minimum Radius = %.2e\n", rmin);
-        fprintf(OutFile2,"## Maximum Radius = %.2e\n", rmax);
-        fprintf(OutFile2,"## Minimum Radius for long side = %.2e\n", rmin_long);
-        fprintf(OutFile2,"## Maximum Radius for long side = %.2e\n", rmax_long);
-        fprintf(OutFile2,"## Format: Row 1 = radial bin 1, Row 2 = radial bin 2, Row 3 = radial bin 3, Rows 4+ = zeta_l1l2l3^abc\n");
+        fprintf(OutFile, "## Bins: %d\n", NBIN);
+        fprintf(OutFile, "## Minimum Radius = %.2e\n", rmin);
+        fprintf(OutFile, "## Maximum Radius = %.2e\n", rmax);
+        fprintf(OutFile,
+                "## Format: Row 1 = radial bin 1, Row 2 = radial bin 2, Rows "
+                "3+ = zeta_ell^ab\n");
+        fprintf(OutFile, "## Column 1 specifies the angular multipole\n");
 
-        // First print the indices of the radial bins
-        for(int i=0;i<NBIN_LONG;i++){
-          for(int j=0; j<NBIN; j++){
-            for(int k=j+1; k<NBIN; k++){
-              fprintf(OutFile2,"%2d\t",i);
-            }
-          }
+        // First print the indices of the first radial bin
+        for (int i = 0; i < NBIN; i++) {
+            for (int j = i + 1; j < NBIN; j++)
+                fprintf(OutFile, "%2d\t", i);
         }
-        fprintf(OutFile2,"\n");
+        fprintf(OutFile, " \n");
 
-        for(int i=0;i<NBIN_LONG;i++){
-          for(int j=0; j<NBIN; j++){
-            for(int k=j+1; k<NBIN; k++){
-              fprintf(OutFile2,"%2d\t",j);
-            }
-          }
+        // Print the indices of the second radial bin
+        for (int i = 0; i < NBIN; i++) {
+            for (int j = i + 1; j < NBIN; j++)
+                fprintf(OutFile, "%2d\t", j);
         }
-        fprintf(OutFile2,"\n");
+        fprintf(OutFile, "\n");
 
-        for(int i=0;i<NBIN_LONG;i++){
-          for(int j=0; j<NBIN; j++){
-            for(int k=j+1; k<NBIN; k++){
-              fprintf(OutFile2,"%2d\t",k);
+        // Now print the 3PCF
+        for (int i = 0, ct = 0; i < NBIN; i++) {
+            for (int j = i + 1; j < NBIN; j++, ct++) {
+                fprintf(OutFile, "%le\t", threepcf[ct]);
             }
-          }
         }
-        fprintf(OutFile2,"\n");
+        fprintf(OutFile, "\n");
 
-        // Now print the 4PCF.
-        for (int i=0;i<N4PCF;i++) fprintf(OutFile2,"%le\t",fourpcf[i]);
-        fprintf(OutFile2,"\n");
         fflush(NULL);
 
         // Close open files
-        fclose(OutFile2);
+        fclose(OutFile);
 
-        printf("4PCF Output saved to %s\n",out_name2);
-      }
+        printf("3PCF Output saved to %s\n", out_name);
 
-     }
+        {
+            // SAVE 4PCF
 
-  inline void add_3pcf(Pairs *pairs, Float wp) {
-    // wp is the primary galaxy weight
+            // First create output files
+            char out_name2[1000];
+            snprintf(out_name2, sizeof out_name2, "output/%s_4pcf.txt",
+                     out_string);
+            FILE* OutFile2 = fopen(out_name2, "w");
 
-    // COMPUTE 3PCF CONTRIBUTIONS
-    BinTimer3.Start();
+            // Print some useful information
+            fprintf(OutFile2, "## Bins: %d\n", NBIN);
+            fprintf(OutFile2, "## Minimum Radius = %.2e\n", rmin);
+            fprintf(OutFile2, "## Maximum Radius = %.2e\n", rmax);
+            fprintf(OutFile2, "## Minimum Radius for long side = %.2e\n",
+                    rmin_long);
+            fprintf(OutFile2, "## Maximum Radius for long side = %.2e\n",
+                    rmax_long);
+            fprintf(OutFile2,
+                    "## Format: Row 1 = radial bin 1, Row 2 = radial bin 2, "
+                    "Row 3 = radial bin 3, Rows 4+ = zeta_l1l2l3^abc\n");
 
-	for (int i=0, ct=0; i<NBIN; i++) {
-	    for (int j=i+1; j<NBIN; j++, ct++) {
-        threepcf[ct] = pairs->xi0[i] * pairs->xi0[j] / wp;
-      }
-    }
+            // First print the indices of the radial bins
+            for (int i = 0; i < NBIN_LONG; i++) {
+                for (int j = 0; j < NBIN; j++) {
+                    for (int k = j + 1; k < NBIN; k++) {
+                        fprintf(OutFile2, "%2d\t", i);
+                    }
+                }
+            }
+            fprintf(OutFile2, "\n");
 
-    BinTimer3.Stop();
+            for (int i = 0; i < NBIN_LONG; i++) {
+                for (int j = 0; j < NBIN; j++) {
+                    for (int k = j + 1; k < NBIN; k++) {
+                        fprintf(OutFile2, "%2d\t", j);
+                    }
+                }
+            }
+            fprintf(OutFile2, "\n");
 
-	return;
-    }
+            for (int i = 0; i < NBIN_LONG; i++) {
+                for (int j = 0; j < NBIN; j++) {
+                    for (int k = j + 1; k < NBIN; k++) {
+                        fprintf(OutFile2, "%2d\t", k);
+                    }
+                }
+            }
+            fprintf(OutFile2, "\n");
 
-  inline void add_4pcf(Pairs *pair1, Pairs *pair2, int bin_long) {
-    
-      // COMPUTE 4PCF CONTRIBUTIONS
+            // Now print the 4PCF.
+            for (int i = 0; i < N4PCF; i++)
+                fprintf(OutFile2, "%le\t", fourpcf[i]);
+            fprintf(OutFile2, "\n");
+            fflush(NULL);
 
-      BinTimer4.Start();
+            // Close open files
+            fclose(OutFile2);
 
-      // Iterate over second bin
-      for(int j=0, bin_index=0; j<NBIN; j++){
-        // Iterate over final bin and advance the 4PCF array counter
-        for(int k=j+1; k<NBIN; k++){
-          fourpcf[bin_long*N3PCF+bin_index++] += pair1->xi0[j] * pair2->xi0[k] + pair1->xi0[k] * pair2->xi0[j];
+            printf("4PCF Output saved to %s\n", out_name2);
         }
-      }
-      //End of radial binning loops
-  BinTimer4.Stop();
+    }
 
-	return;
+    inline void add_3pcf(Pairs* pairs, Float wp) {
+        // wp is the primary galaxy weight
+
+        // COMPUTE 3PCF CONTRIBUTIONS
+        BinTimer3.Start();
+
+        for (int i = 0, ct = 0; i < NBIN; i++) {
+            for (int j = i + 1; j < NBIN; j++, ct++) {
+                threepcf[ct] = pairs->xi0[i] * pairs->xi0[j] / wp;
+            }
+        }
+
+        BinTimer3.Stop();
+
+        return;
+    }
+
+    inline void add_4pcf(Pairs* pair1, Pairs* pair2, int bin_long) {
+        // COMPUTE 4PCF CONTRIBUTIONS
+
+        BinTimer4.Start();
+
+        // Iterate over second bin
+        for (int j = 0, bin_index = 0; j < NBIN; j++) {
+            // Iterate over final bin and advance the 4PCF array counter
+            for (int k = j + 1; k < NBIN; k++) {
+                fourpcf[bin_long * N3PCF + bin_index++] +=
+                    pair1->xi0[j] * pair2->xi0[k] +
+                    pair1->xi0[k] * pair2->xi0[j];
+            }
+        }
+        // End of radial binning loops
+        BinTimer4.Stop();
+
+        return;
     }
 
 };  // end NPCF class
