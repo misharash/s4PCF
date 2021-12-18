@@ -7,15 +7,13 @@ class NPCF {
     // This should accumulate the NPCF contributions, for all combination of
     // bins.
    public:
-    STimer MultTimer;
-
-    STimer BinTimer3;
+    STimer AddTimer3;
 
 // Array to hold the 3PCF
 #define N3PCF (NBIN * (NBIN + 1) / 2)  // only compute bin1 <= bin2
     Float threepcf[N3PCF];
 
-    STimer BinTimer4;
+    STimer AddTimer4;
 
 // Sizes of 4pcf array
 #define N4PCF NBIN_LONG* NBIN*(NBIN + 1) / 2
@@ -56,9 +54,8 @@ class NPCF {
         /// Report the NPCF timing measurements (for a single CPU).
 
         printf("\n# Single CPU Timings");
-        printf("\nSpherical harmonics: %.3f s", MultTimer.Elapsed());
-        printf("\n3PCF binning: %.3f s", BinTimer3.Elapsed());
-        printf("\n4PCF binning: %.3f s", BinTimer4.Elapsed());
+        printf("\n3PCF addition: %.3f s", AddTimer3.Elapsed());
+        printf("\n4PCF addition: %.3f s", AddTimer4.Elapsed());
         printf("\n");
     }
 
@@ -178,7 +175,7 @@ class NPCF {
         // wp is the primary galaxy weight
 
         // COMPUTE 3PCF CONTRIBUTIONS
-        BinTimer3.Start();
+        AddTimer3.Start();
 
         for (int i = 0, ct = 0; i < NBIN; i++) {
             for (int j = i; j < NBIN; j++, ct++) {
@@ -186,7 +183,7 @@ class NPCF {
             }
         }
 
-        BinTimer3.Stop();
+        AddTimer3.Stop();
 
         return;
     }
@@ -194,7 +191,7 @@ class NPCF {
     inline void add_4pcf(Pairs* pair1, Pairs* pair2, int bin_long) {
         // COMPUTE 4PCF CONTRIBUTIONS
 
-        BinTimer4.Start();
+        AddTimer4.Start();
 
         // Iterate over second bin
         for (int j = 0, bin_index = 0; j < NBIN; j++) {
@@ -206,7 +203,7 @@ class NPCF {
             }
         }
         // End of radial binning loops
-        BinTimer4.Stop();
+        AddTimer4.Stop();
 
         return;
     }
