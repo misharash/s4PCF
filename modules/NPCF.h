@@ -13,7 +13,7 @@ class NPCF {
 #define N3PCF (NBIN * (NBIN + 1) / 2)  // only compute bin1 <= bin2
     Float threepcf[N3PCF];
 
-    STimer AddTimer4, ExclTimer4_doubleside;
+    STimer AddTimer4, ExclTimer4_doubleside, ExclTimer4_triangle;
 
 // Sizes of 4pcf array
 #define N4PCF NBIN_LONG* NBIN*(NBIN + 1) / 2
@@ -56,6 +56,7 @@ class NPCF {
         printf("\n# Single CPU Timings");
         printf("\n3PCF self-counts exclusion: %.3f s", ExclTimer3.Elapsed());
         printf("\n3PCF addition: %.3f s", AddTimer3.Elapsed());
+        printf("\n4PCF triangle self-counts exclusion: %.3f s", ExclTimer4_triangle.Elapsed());
         printf("\n4PCF double-side self-counts exclusion: %.3f s", ExclTimer4_doubleside.Elapsed());
         printf("\n4PCF addition: %.3f s", AddTimer4.Elapsed());
         printf("\n");
@@ -201,6 +202,22 @@ class NPCF {
         }
 
         AddTimer3.Stop();
+
+        return;
+    }
+
+    inline void excl_4pcf_triangle(int bin_long, int bin, int bin2, Float wprod) {
+        // COMPUTE 4PCF CONTRIBUTIONS
+
+        ExclTimer4_triangle.Start();
+
+        int i = bin, j = bin2; // i <= j
+        if (i <= j) {
+            int index = j + NBIN*i - i * (i-1) / 2;
+            fourpcf[bin_long * N3PCF + index] -= wprod;
+        }
+
+        ExclTimer4_triangle.Stop();
 
         return;
     }
