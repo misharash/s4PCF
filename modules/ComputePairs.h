@@ -1,10 +1,6 @@
 #ifndef COMPUTE_PAIRS_H
 #define COMPUTE_PAIRS_H
 
-#ifdef GPU
-#include "gpufuncs.h"
-#endif
-
 // ====================  Computing the pairs ==================
 
 void compute_pairs(Grid* grid,

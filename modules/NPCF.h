@@ -3,27 +3,17 @@
 
 // ========================== Here are all of the cross-powers ============
 
-#ifdef GPU
-#include "gpufuncs.h"
-#endif
-
 class NPCF {
     // This should accumulate the NPCF contributions, for all combination of
     // bins.
    public:
-    int dct = 0;
-
-    int bincounts[NBIN];
-    Float binweight[NBIN];
     STimer MultTimer;
 
     STimer BinTimer3;
 
 // Array to hold the 3PCF
-#define NL (ORDER + 1)
 #define N3PCF (NBIN * (NBIN - 1) / 2)  // only compute bin1 < bin2
     Float threepcf[N3PCF];
-    int nouter3;
 
     STimer BinTimer4;
 
@@ -55,11 +45,6 @@ class NPCF {
 
     void sum_power(NPCF* c) {
         // Just add up all of the threaded power into the zeroth element
-
-        for (int i = 0; i < NBIN; i++) {
-            bincounts[i] += c->bincounts[i];
-            binweight[i] += c->binweight[i];
-        }
 
         for (int x = 0; x < N3PCF; x++)
             threepcf[x] += c->threepcf[x];

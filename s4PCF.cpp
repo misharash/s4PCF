@@ -197,10 +197,6 @@ void zero_power() {
 
 void sum_power() {
     // Just add up all of the threaded power into the zeroth element
-    for (int t = 0; t < MAXTHREAD; t++)
-        // printf("# Bin 0 counter for thread %2d: %9lld\n", t,
-        // npcf[t].bincounts[0]);
-        printf("# Bin 0 counter for thread %2d: %d\n", t, npcf[t].bincounts[0]);
     for (int t = 1; t < MAXTHREAD; t++)
         npcf[0].sum_power(npcf + t);
     for (int t = 1; t < MAXTHREAD; t++)
@@ -431,11 +427,6 @@ int main(int argc, char* argv[]) {
     if (gridsize < 1)
         printf("#\n# WARNING: grid appears inefficiently coarse\n#\n");
     printf("Bins = %d\n", NBIN);
-#ifdef ALLPARITY
-    printf("Parity: All\n");
-#else
-    printf("Parity: Even\n");
-#endif
 
     IOTime.Start();
     InfileReadTime.Start();
