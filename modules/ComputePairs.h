@@ -19,7 +19,7 @@ void compute_pairs(Grid* grid,
     Float rmin2 = rmin * rmin;  // rmax2*1e-12;    // Just an underflow guard
     Float rmax_long2 = rmax_long * rmax_long;
     Float rmin_long2 = rmin_long * rmin_long;
-    uint64 cnt = 0;
+    uint64 cnt = 0, cnt2 = 0;
 
     Pairs* pairs_i = new Pairs[np];
 
@@ -28,9 +28,8 @@ void compute_pairs(Grid* grid,
     // of the work. Including the empty cells appears to fool the dynamic thread
     // allocation sometimes.
 
-    STimer accmult,
+    STimer accpairs,
         powertime;  // measure the time spent accumulating powers for multipoles
-    STimer sphtime;
     // We're going to loop only over the non-empty cells.
 
     long icnt = 0;
@@ -79,7 +78,7 @@ void compute_pairs(Grid* grid,
                 // Then loop over secondaries, cell-by-cell
                 integer3 delta;
                 if (thread == 0)
-                    accmult.Start();
+                    accpairs.Start();
                 for (delta.x = -maxsep; delta.x <= maxsep; delta.x++)
                     for (delta.y = -maxsep; delta.y <= maxsep; delta.y++)
                         for (delta.z = -maxsep; delta.z <= maxsep; delta.z++) {
@@ -144,8 +143,10 @@ void compute_pairs(Grid* grid,
                         }      // Done with this delta.z loop
                 // done with delta.y loop
                 // done with delta.x loop
-                if (thread == 0)
-                    accmult.Stop();
+                if (thread == 0) {
+                    accpairs.Stop();
+                    powertime.Start();
+                }
 
                 // Now combine pair counts into 3pcf counts
                 npcf[thread].add_3pcf(pairs_i + j, primary_w);
@@ -156,8 +157,6 @@ void compute_pairs(Grid* grid,
                 if (_gpumode == 0) {
                     // This is done on CPU - calculate add_to_power here
                     // Acumulate powers here - code in NPCF.h (uses GPU kernels)
-                    if (thread == 0)
-                        powertime.Start();
                     for (delta.x = -maxsep_long; delta.x <= maxsep_long;
                          delta.x++)
                         for (delta.y = -maxsep_long; delta.y <= maxsep_long;
@@ -198,7 +197,7 @@ void compute_pairs(Grid* grid,
                                     // ranges
                                     if (norm2 < rmax_long2 &&
                                         norm2 > rmin_long2)
-                                        cnt++;
+                                        cnt2++;
                                     else
                                         continue;
 
@@ -226,14 +225,12 @@ void compute_pairs(Grid* grid,
 #ifndef OPENMP
 #ifdef AVX
     printf(
-        "\n# Time to compute required powers of x_hat, y_hat, z_hat (with "
-        "AVX): %.2f\n\n",
-        accmult.Elapsed());
+        "\n# Time to compute required pairs (with AVX): %.2f\n\n",
+        accpairs.Elapsed());
 #else
     printf(
-        "\n# Time to compute required powers of x_hat, y_hat, z_hat (no AVX): "
-        "%.2f\n\n",
-        accmult.Elapsed());
+        "\n# Time to compute required pairs (no AVX): %.2f\n\n",
+        accpairs.Elapsed());
 #endif
 #endif
 
@@ -249,8 +246,17 @@ void compute_pairs(Grid* grid,
         "%f.\n",
         expected, cnt / (expected * grid->np));
 
+    printf("# We counted  %lld pairs within [%f %f].\n", cnt2, rmin_long, rmax_long);
+    printf("# Average of %f pairs per primary particle.\n",
+           (Float)cnt2 / grid->np);
+    expected = grid->np * (4 * M_PI / 3.0) * (pow(rmax_long, 3.0) - pow(rmin_long, 3.0)) / (boxsize.x * boxsize.y * boxsize.z) / 2;
+    printf(
+        "# We expected %1.0f pairs per primary particle, off by a factor of "
+        "%f.\n",
+        expected, cnt2 / (expected * grid->np));
+
     // Detailed timing breakdown
-    printf("\n# Accumulate Powers: %6.3f s\n", accmult.Elapsed());
+    printf("\n# Accumulate Pairs: %6.3f s\n", accpairs.Elapsed());
     printf("# Compute Power: %6.3f s\n\n", powertime.Elapsed());
 
     delete[] pairs_i;
