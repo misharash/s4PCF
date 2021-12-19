@@ -138,7 +138,7 @@ class Pairs {
     // }
     //   }
 
-    void save_pairs(char* out_string, Float rmin, Float rmax) {
+    void save_pairs(char* out_string, Float rmin, Float rmax, Float sumw) {
         // Print the output isotropic 2PCF counts to file
 
         // Create output directory if not in existence
@@ -164,9 +164,10 @@ class Pairs {
             fprintf(OutFile, "%2d\t", i);
         fprintf(OutFile, " \n");
 
-        // Now print the 2PCF, ell-by-ell.
+        // Now print the 2PCF
+        Float norm = pow(sumw, -2); // normalize by sum of (positive) weights squared
         for (int i = 0; i < NBIN; i++)
-            fprintf(OutFile, "%le\t", xi0[i]);
+            fprintf(OutFile, "%le\t", xi0[i]*norm);
         fprintf(OutFile, "\n");
 
         fflush(NULL);
@@ -497,8 +498,8 @@ int main(int argc, char* argv[]) {
     // pairs[0].report_pairs();
 
     // Save the outputs
-    pairs[0].save_pairs(outstr, rmin, rmax);
-    npcf[0].save_power(outstr, rmin, rmax, rmin_long, rmax_long);
+    pairs[0].save_pairs(outstr, rmin, rmax, grid.sumw_pos);
+    npcf[0].save_power(outstr, rmin, rmax, rmin_long, rmax_long, grid.sumw_pos);
 
     npcf[0].report_timings();
 

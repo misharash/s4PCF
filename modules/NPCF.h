@@ -67,7 +67,8 @@ class NPCF {
                     Float rmin,
                     Float rmax,
                     Float rmin_long,
-                    Float rmax_long) {
+                    Float rmax_long,
+                    Float sumw) {
         // Print the output NPCF counts to file
 
         // SAVE 3PCF
@@ -100,8 +101,9 @@ class NPCF {
         fprintf(OutFile, "\n");
 
         // Now print the 3PCF
+        Float norm = pow(sumw, -3); // normalize by sum of (positive) weights cubed
         for (int ct = 0; ct < N3PCF; ct++)
-            fprintf(OutFile, "%le\t", threepcf[ct]);
+            fprintf(OutFile, "%le\t", threepcf[ct]*norm);
         
         fprintf(OutFile, "\n");
 
@@ -162,8 +164,9 @@ class NPCF {
             fprintf(OutFile2, "\n");
 
             // Now print the 4PCF.
+            Float norm = pow(sumw, -4); // normalize by sum of (positive) weights to the 4th power
             for (int i = 0; i < N4PCF; i++)
-                fprintf(OutFile2, "%le\t", fourpcf[i]);
+                fprintf(OutFile2, "%le\t", fourpcf[i]*norm);
             fprintf(OutFile2, "\n");
             fflush(NULL);
 
