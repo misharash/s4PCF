@@ -68,9 +68,9 @@ set OMP_NUM_THREADS = 4
 set code = ./s4PCF
 
 if ($periodic) then
-  set command = "$code -rmax $rmax -rmin $rmin -ngrid $ngrid  -scale $scale -boxsize $boxsize"
+  set command = "$code -rmax $rmax -rmin $rmin -rmax_long $rmax_long -rmin_long $rmin_long -ngrid $ngrid -scale $scale -boxsize $boxsize"
 else
-  set command = "$code -rmax $rmax -rmin $rmin -ngrid $ngrid -scale $scale"
+  set command = "$code -rmax $rmax -rmin $rmin -rmax_long $rmax_long -rmin_long $rmin_long -ngrid $ngrid -scale $scale"
 endif
 
 # Create a temporary directory for saving
@@ -130,7 +130,7 @@ mv output/$root.r_?pc*.txt $tmpout/
 
 echo "Done with R^N"
 
-# Now make D-R for each of 32 random catalogs, with loading
+# Now make D-R for each of 49 random catalogs
 foreach n ( 00 01 02 03 04 05 06 07 08 09 \
 	    10 11 12 13 14 15 16 17 18 19 \
 	    20 21 22 23 24 25 26 27 28 29 \
@@ -148,7 +148,7 @@ foreach n ( 00 01 02 03 04 05 06 07 08 09 \
     date >> $errlog
     # ($command -in $tmp/$root.ran.$n -load $multfile -outstr $root.n$n -balance > $tmpout/$root.n$n.out) >>& $errlog
     # save & load not implemented yet so instead
-    ($command -in $tmp/$root.ran.$n -load $multfile -outstr $root.n$n -balance > $tmpout/$root.n$n.out) >>& $errlog
+    ($command -in $tmp/$root.ran.$n -outstr $root.n$n -balance > $tmpout/$root.n$n.out) >>& $errlog
     # Copy the output into the temporary directory
     mv output/$root.n${n}_?pc*.txt $tmpout/
 
