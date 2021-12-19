@@ -55,9 +55,6 @@ set tmp = "$dir/tmp" # temporary directory for intermediate file storage for thi
 
 ##########################################################
 
-# Define output coupling file (to avoid recomputation of disconnected pieces if multiple aperiodic simulations are run)
-set RRR_coupling = $out/$ranroot.RRR_coupling.npy
-
 # Set number of threads (no SLURM)
 set OMP_NUM_THREADS = 4
 
