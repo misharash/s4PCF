@@ -234,8 +234,8 @@ class NPCF {
             int index = j + NBIN*i - i * (i-1) / 2;
             fourpcf[bin_long * N3PCF + index] -= pair->xi0[bin2] * wprod;
         }
-        for (int bin2 = bin + 1; bin2 < NBIN; bin2++) {
-            int i = bin, j = bin2; // i < j
+        for (int bin2 = bin; bin2 < NBIN; bin2++) { // go over bin=bin2 second time for consistency
+            int i = bin, j = bin2; // i <= j
             int index = j + NBIN*i - i * (i-1) / 2;
             fourpcf[bin_long * N3PCF + index] -= pair->xi0[bin2] * wprod;
         }
