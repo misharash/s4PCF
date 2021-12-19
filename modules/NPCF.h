@@ -82,9 +82,8 @@ class NPCF {
         fprintf(OutFile, "## Minimum Radius = %.2e\n", rmin);
         fprintf(OutFile, "## Maximum Radius = %.2e\n", rmax);
         fprintf(OutFile,
-                "## Format: Row 1 = radial bin 1, Row 2 = radial bin 2, Rows "
-                "3+ = zeta_ell^ab\n");
-        fprintf(OutFile, "## Column 1 specifies the angular multipole\n");
+                "## Format: Row 1 = radial bin 1, Row 2 = radial bin 2, Row "
+                "3 = zeta_ell^ab\n");
 
         // First print the indices of the first radial bin
         for (int i = 0; i < NBIN; i++) {
@@ -132,7 +131,7 @@ class NPCF {
                     rmax_long);
             fprintf(OutFile2,
                     "## Format: Row 1 = radial bin 1 (long side), Row 2 = radial bin 2, "
-                    "Row 3 = radial bin 3, Rows 4+ = zeta_l1l2l3^abc\n");
+                    "Row 3 = radial bin 3, Row 4 = zeta_l1l2l3^abc\n");
 
             // First print the indices of the radial bins
             for (int i = 0; i < NBIN_LONG; i++) {
