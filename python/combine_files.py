@@ -87,6 +87,7 @@ for N in Ns:
             zfile.write(line)
         for a in range(len(zeta)):
             zfile.write("%.8e\t"%zeta[a])
+        zfile.close()
 
     if N==3:
         # isotropic 3PCF should be easy too
@@ -100,9 +101,7 @@ for N in Ns:
             if l>=6: continue
             zfile.write(line)
         for a in range(len(zeta)):
-            for b in range(len(zeta[a])):
-                zfile.write("%.8e\t"%zeta[a,b])
-            zfile.write("\n")
+            zfile.write("%.8e\t"%zeta[a])
         zfile.close()
 
     if N==4:
@@ -117,9 +116,7 @@ for N in Ns:
             if l>=9: continue
             zfile.write(line)
         for a in range(len(zeta)):
-            for b in range(len(zeta[a])):
-                zfile.write("%.8e\t"%zeta[a,b])
-            zfile.write("\n")
+            zfile.write("%.8e\t"%zeta[a])
         zfile.close()
 
     print("Computed %dPCF using %d (data-random) files, saving to %s\n"%(N,N_files,zeta_file))
