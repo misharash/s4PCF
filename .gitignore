@@ -29,6 +29,7 @@
 
 # Executables
 s4PCF
+gs4PCF
 *.exe
 *.out
 *.app
