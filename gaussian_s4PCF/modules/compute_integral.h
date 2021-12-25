@@ -326,7 +326,7 @@ class compute_integral{
                 char output_string[50];
                 sprintf(output_string,"%d", n_loops);
 
-                locint.normalize(grid1->norm,grid2->norm,grid3->norm,grid4->norm, (Float)loc_used_quads);
+                locint.normalize();
 
                 locint.save_integrals(output_string,0);
 
@@ -348,7 +348,7 @@ class compute_integral{
         TotalTime.Stop();
 
         // Normalize the accumulated results, using the RR counts
-        sumint.normalize(grid1->norm,grid2->norm,grid3->norm,grid4->norm,(Float)tot_quads);
+        sumint.normalize();
 
         int runtime = TotalTime.Elapsed();
         printf("\n\nINTEGRAL %d OF %d COMPLETE\n",iter_no,tot_iter);

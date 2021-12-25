@@ -15,6 +15,7 @@ private:
     int nbin, nbin_long, mbin;
     int Nbin, Nbinpairs, N4;
     Float *c4; // Array to accumulate integral
+    Float *norm4; // Array to store normalizations for integral
     JK_weights *JK12, *JK23, *JK34; // RR counts and jackknife weights
     char* out_file;
     bool box,rad=0; // Flags to decide whether we have a periodic box + if we have a radial correlation function only
@@ -50,6 +51,7 @@ public:
         int ec=0;
         // Initialize the binning
         ec+=posix_memalign((void **) &c4, PAGE, sizeof(double)*N4);
+        ec+=posix_memalign((void **) &norm4, PAGE, sizeof(double)*N4);
         ec+=posix_memalign((void **) &binct4, PAGE, sizeof(uint64)*N4);
 
         assert(ec==0);
@@ -166,9 +168,10 @@ public:
             tmp_full_bin = bin_ij*Nbinpairs + getbin_pair(bin_ik, bin_jl);
 
             // Now compute the integral;
-            c4v = tmp_weight/prob*(xi_ik*xi_jl + xi_ij*xi_kl + xi_il*xi_jk); // with xi_ik*xi_jl = xi_il*xi_jk symmetry factor
+            c4v = tmp_weight/prob*(xi_ik*xi_jl + xi_ij*xi_kl + xi_il*xi_jk); // gaussian 4PCF
             // Add to local counts
             c4[tmp_full_bin]+=c4v;
+            norm4[tmp_full_bin]+=tmp_weight/prob;
             binct4[tmp_full_bin]++;
         }
     }
@@ -197,6 +200,7 @@ public:
         // Add the values accumulated in ints to the corresponding internal sums
         for(int i=0; i<N4; i++) {
             c4[i]+=ints->c4[i];
+            norm4[i]+=ints->norm4[i];
             binct4[i]+=ints->binct4[i];
         }
     }
@@ -223,24 +227,10 @@ public:
         }
     }
 
-    void normalize(Float norm1, Float norm2, Float norm3, Float norm4, Float n_quads){
-        // Normalize the accumulated integrals (partly done by the normalising probabilities used from the selected cubes)
-        // n_pair etc. are the number of PARTICLE pairs etc. attempted (not including rejected cells, but including pairs which don't fall in correct bin ranges)
-        // To avoid recomputation
-        double corrf2 = norm1*norm2; // correction factor for densities of random points
-        double corrf3 = corrf2*norm3;
-        double corrf4 = corrf3*norm4;
+    void normalize(){
+        // Normalize the accumulated integrals
         for(int i=0; i<N4; i++) {
-            c4[i]/=(n_quads*corrf4);
-        }
-
-        // Further normalize by RR counts from corrfunc
-        for(int i=0; i<nbin*mbin;i++){
-            Float Ra_i = JK12->RR_pair_counts[i];
-            for(int j=0;j<nbin*mbin;j++){
-                Float Rab4=Ra_i*JK34->RR_pair_counts[j];
-                c4[i*nbin*mbin+j]/=Rab4;
-            }
+            c4[i]/=norm4[i];
         }
     }
     void save_counts(uint64 quad_counts){
