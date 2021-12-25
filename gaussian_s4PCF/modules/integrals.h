@@ -10,9 +10,10 @@
 class Integrals{
 private:
     CorrelationFunction *cf12, *cf13, *cf24;
-    int nbin, mbin;
     Float rmin,rmax,mumin,mumax,dmu; //Ranges in r and mu
     Float *r_high, *r_low; // Max and min of each radial bin
+    int nbin, nbin_long, mbin;
+    int Nbin, Nbinpairs, N4;
     Float *c4; // Array to accumulate integral
     JK_weights *JK12, *JK23, *JK34; // RR counts and jackknife weights
     char* out_file;
@@ -39,13 +40,17 @@ public:
     }
     void init(Parameters *par){
         nbin = par->nbin; // number of radial bins
+        nbin_long = par->nbin_long; // number of long radial bins
         mbin = par->mbin; // number of mu bins
+        Nbin = nbin*mbin; // number of short side bins
+        Nbinpairs = Nbin*(Nbin+1)/2; // number of unique short side bin pairs
+        N4 = nbin_long*Nbinpairs; // total bumber of bins in squeezed 4PCF
         out_file = par->out_file; // output directory
 
         int ec=0;
         // Initialize the binning
-        ec+=posix_memalign((void **) &c4, PAGE, sizeof(double)*nbin*mbin*nbin*mbin);
-        ec+=posix_memalign((void **) &binct4, PAGE, sizeof(uint64)*nbin*mbin*nbin*mbin);
+        ec+=posix_memalign((void **) &c4, PAGE, sizeof(double)*N4);
+        ec+=posix_memalign((void **) &binct4, PAGE, sizeof(uint64)*N4);
 
         assert(ec==0);
         reset();
@@ -72,7 +77,7 @@ public:
     }
 
     void reset(){
-        for (int j=0; j<nbin*mbin*nbin*mbin; j++) {
+        for (int j=0; j<N4; j++) {
             c4[j]=0;
             binct4[j] = 0;
         }
@@ -147,11 +152,9 @@ public:
 public:
     void sum_ints(Integrals* ints) {
         // Add the values accumulated in ints to the corresponding internal sums
-        for(int i=0;i<nbin*mbin;i++){
-            for(int j=0;j<nbin*mbin;j++){
-                c4[i*nbin*mbin+j]+=ints->c4[i*nbin*mbin+j];
-                binct4[i*nbin*mbin+j]+=ints->binct4[i*nbin*mbin+j];
-            }
+        for(int i=0; i<N4; i++) {
+            c4[i]+=ints->c4[i];
+            binct4[i]+=ints->binct4[i];
         }
     }
 
@@ -160,12 +163,10 @@ public:
         Float n_loops = (Float)n_loop;
         Float self_c4=0, diff_c4=0;
         // Compute Frobenius norms and sum integrals
-        for(int i=0;i<nbin*mbin;i++){
-            for(int j=0;j<nbin*mbin;j++){
-                self_c4+=pow(c4[i*nbin*mbin+j]/n_loops,2.);
-                diff_c4+=pow(c4[i*nbin*mbin+j]/n_loops-(c4[i*nbin*mbin+j]+ints->c4[i*nbin*mbin+j])/(n_loops+1.),2.);
-                }
-            }
+        for(int i=0; i<N4; i++) {
+            self_c4+=pow(c4[i]/n_loops,2.);
+            diff_c4+=pow(c4[i]/n_loops-(c4[i]+ints->c4[i])/(n_loops+1.),2.);
+        }
         diff_c4=sqrt(diff_c4);
         self_c4=sqrt(self_c4);
         // Return percent difference
@@ -173,13 +174,12 @@ public:
         }
 
     void sum_total_counts(uint64& acc4){
-        // Add local counts to total bin counts in acc2-4
-        for (int i=0; i<nbin*mbin; i++) {
-            for (int j=0; j<nbin*mbin; j++) {
-                acc4+=binct4[i*nbin*mbin+j];
-            }
+        // Add local counts to total bin counts in acc4
+        for(int i=0; i<N4; i++) {
+            acc4+=binct4[i];
         }
     }
+
     void normalize(Float norm1, Float norm2, Float norm3, Float norm4, Float n_quads){
         // Normalize the accumulated integrals (partly done by the normalising probabilities used from the selected cubes)
         // n_pair etc. are the number of PARTICLE pairs etc. attempted (not including rejected cells, but including pairs which don't fall in correct bin ranges)
@@ -187,10 +187,8 @@ public:
         double corrf2 = norm1*norm2; // correction factor for densities of random points
         double corrf3 = corrf2*norm3;
         double corrf4 = corrf3*norm4;
-        for(int i = 0; i<nbin*mbin;i++){
-            for(int j=0;j<nbin*mbin;j++){
-                c4[i*nbin*mbin+j]/=(n_quads*corrf4);
-            }
+        for(int i=0; i<N4; i++) {
+            c4[i]/=(n_quads*corrf4);
         }
 
         // Further normalize by RR counts from corrfunc
@@ -226,12 +224,10 @@ public:
 
         FILE * C4File = fopen(c4name,"w"); // for c4 part of integral
 
-        for(int i=0;i<nbin*mbin;i++){
-            for(int j=0;j<nbin*mbin;j++){
-                fprintf(C4File,"%le\t",c4[i*nbin*mbin+j]);
-            }
-            fprintf(C4File,"\n");
+        for(int i=0; i<N4; i++) {
+            fprintf(C4File,"%le\t",c4[i]);
         }
+        fprintf(C4File,"\n");
 
         fflush(NULL);
 
@@ -243,12 +239,10 @@ public:
             snprintf(binname,sizeof binname, "%sCovMatricesAll/binct_c4_n%d_m%d_%d%d,%d%d_%s.txt",out_file, nbin,mbin,I1,I2,I3,I4,suffix);
             FILE * BinFile = fopen(binname,"w");
 
-            for(int i=0;i<nbin*mbin;i++){
-                for(int j=0;j<nbin*mbin;j++){
-                    fprintf(BinFile,"%llu\t",binct4[i*nbin*mbin+j]);
-                    }
-                fprintf(BinFile,"\n");
+            for(int i=0; i<N4; i++) {
+                fprintf(BinFile,"%llu\t",binct4[i]);
             }
+            fprintf(BinFile,"\n");
             fclose(BinFile);
         }
     }
