@@ -155,11 +155,9 @@ public:
         }
     }
 
-    void frobenius_difference_sum(Integrals* ints, int n_loop, Float &frobC2, Float &frobC3, Float &frobC4){
+    void frobenius_difference_sum(Integrals* ints, int n_loop, Float &frobC4){
         // Add the values accumulated in ints to the corresponding internal sums and compute the Frobenius norm difference between integrals
         Float n_loops = (Float)n_loop;
-        Float self_c2=0, diff_c2=0;
-        Float self_c3=0, diff_c3=0;
         Float self_c4=0, diff_c4=0;
         // Compute Frobenius norms and sum integrals
         for(int i=0;i<nbin*mbin;i++){
@@ -168,15 +166,9 @@ public:
                 diff_c4+=pow(c4[i*nbin*mbin+j]/n_loops-(c4[i*nbin*mbin+j]+ints->c4[i*nbin*mbin+j])/(n_loops+1.),2.);
                 }
             }
-        self_c2=sqrt(self_c2);
-        diff_c2=sqrt(diff_c2);
-        diff_c3=sqrt(diff_c3);
         diff_c4=sqrt(diff_c4);
-        self_c3=sqrt(self_c3);
         self_c4=sqrt(self_c4);
         // Return percent difference
-        frobC2=100.*(diff_c2/self_c2);
-        frobC3=100.*(diff_c3/self_c3);
         frobC4=100.*(diff_c4/self_c4);
         }
 
