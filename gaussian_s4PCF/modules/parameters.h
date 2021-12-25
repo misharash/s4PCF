@@ -24,6 +24,10 @@ public:
 	const char default_corname[500] = "xi/xi_n200_m120_11.dat";
 
     // Name of the correlation function radial binning .csv file
+    char *radial_bin_file_long = NULL;
+    const char default_radial_bin_file_long[500] = "radial_binning_long.csv";
+
+    // Name of the correlation function radial binning .csv file
     char *radial_bin_file_cf = NULL;
     const char default_radial_bin_file_cf[500] = "radial_binning_corr.csv";
 
@@ -140,10 +144,10 @@ public:
     Float cellsize;
 
     // Radial binning parameters (will be set from file)
-    int nbin=0,nbin_cf=0;
-    Float rmin, rmax, rmin_cf,rmax_cf;
-    Float * radial_bins_low, * radial_bins_low_cf;
-    Float * radial_bins_high, * radial_bins_high_cf;
+    int nbin=0, nbin_long=0, nbin_cf=0;
+    Float rmin, rmax, rmin_long, rmax_long, rmin_cf,rmax_cf;
+    Float * radial_bins_low, * radial_bins_low_long, * radial_bins_low_cf;
+    Float * radial_bins_high, * radial_bins_high_long, * radial_bins_high_cf;
 
     // Variable to decide if we are using multiple tracers:
     bool multi_tracers;
@@ -183,6 +187,7 @@ public:
 		else if (!strcmp(argv[i],"-invert")) qinvert = 1;
         else if (!strcmp(argv[i],"-output")) out_file = argv[++i];
         else if (!strcmp(argv[i],"-binfile")) radial_bin_file=argv[++i];
+        else if (!strcmp(argv[i],"-binfile_long")) radial_bin_file_long=argv[++i];
         else if (!strcmp(argv[i],"-binfile_cf")) radial_bin_file_cf=argv[++i];
         else if (!strcmp(argv[i],"-N2")) N2=atof(argv[++i]);
         else if (!strcmp(argv[i],"-N3")) N3=atof(argv[++i]);
@@ -237,6 +242,7 @@ public:
 	    if (corname==NULL) { corname = (char *) default_corname; }// No name was given
 	    if (out_file==NULL) out_file = (char *) default_out_file; // no output savefile
 	    if (radial_bin_file==NULL) {radial_bin_file = (char *) default_radial_bin_file;} // No radial binning
+	    if (radial_bin_file_long==NULL) {radial_bin_file_long = (char *) default_radial_bin_file_long;} // No radial binning
 	    if (radial_bin_file_cf==NULL) {radial_bin_file_cf = (char *) default_radial_bin_file_cf;} // No radial binning
 
 	    if (fname==NULL) fname = (char *) default_fname;   // No name was given
@@ -283,14 +289,20 @@ public:
 	    create_directory();
 
 	    // Read in the radial binning
-	    read_radial_binning(radial_bin_file);
+	    read_radial_binning(radial_bin_file, radial_bins_low, radial_bins_high, rmin, rmax, nbin);
         printf("Read in %d radial bins in range (%.0f, %.0f) successfully.\n",nbin,rmin,rmax);
 
-        read_radial_binning_cf(radial_bin_file_cf);
+	    // Read in the radial binning for long side
+        read_radial_binning(radial_bin_file_long, radial_bins_low_long, radial_bins_high_long, rmin_long, rmax_long, nbin_long);
+        printf("Read in %d radial bins in range (%.0f, %.0f) successfully.\n",nbin_cf,rmin_cf,rmax_cf);
+
+	    // Read in the radial binning for correllation function
+        read_radial_binning(radial_bin_file_cf, radial_bins_low_cf, radial_bins_high_cf, rmin_cf, rmax_cf, nbin_cf);
         printf("Read in %d radial bins in range (%.0f, %.0f) successfully.\n",nbin_cf,rmin_cf,rmax_cf);
 
 	    assert(box_min>0.0);
 	    assert(rmax>0.0);
+	    assert(rmax_long>0.0);
 	    assert(nside>0);
 
 #ifdef OPENMP
@@ -308,6 +320,12 @@ public:
 		if (gridsize<1) printf("#\n# WARNING: grid appears inefficiently coarse\n#\n");
         printf("Radial Bins = %d\n", nbin);
 		printf("Radial Binning = {%6.5f, %6.5f} over %d bins (user-defined bin widths) \n",rmin,rmax,nbin);
+		printf("Maximum Long Radius = %6.5e\n", rmax_long);
+		gridsize = rmax_long/(box_max/nside);
+		printf("Max Long Radius in Grid Units = %6.5e\n", gridsize);
+		if (gridsize<1) printf("#\n# WARNING: grid appears inefficiently coarse\n#\n");
+        printf("Long Radial Bins = %d\n", nbin_long);
+		printf("Long Radial Binning = {%6.5f, %6.5f} over %d bins (user-defined bin widths) \n",rmin_long,rmax_long,nbin_long);
 
 		printf("Mu Bins = %d\n", mbin);
 		printf("Mu Binning = {%6.5f, %6.5f, %6.5f}\n",mumin,mumax,(mumax-mumin)/mbin);
@@ -323,6 +341,7 @@ private:
         fprintf(stderr, "   -def: This allows one to accept the defaults without giving other entries.\n");
 	    fprintf(stderr, "   -in <file>: The input random particle file for particle-set 1 (space-separated x,y,z,w).\n");
         fprintf(stderr, "   -binfile <filename>: File containing the desired radial bins\n");
+        fprintf(stderr, "   -binfile_long <filename>: File containing the desired radial bins for the long side\n");
         fprintf(stderr, "   -cor <file>: File location of input xi_1 correlation function file.\n");
 	    fprintf(stderr, "   -binfile_cf <filename>: File containing the desired radial bins for the correlation function.\n");
         fprintf(stderr, "   -norm <nofznorm>: Number of galaxies in the first tracer set.\n");
@@ -398,76 +417,10 @@ private:
         }
     }
 
-    void read_radial_binning_cf(char* binfile_name){
-        // Read the radial binning file for a correlation function
-        char line[100000];
-
-        FILE *fp;
-        fp = fopen(binfile_name,"r");
-        if (fp==NULL){
-            fprintf(stderr,"Radial correlation function binning file %s not found\n",binfile_name);
-            abort();
-        }
-        fprintf(stderr,"\nReading radial correlation function binning file '%s'\n",binfile_name);
-
-        // Count lines to construct the correct size
-        while (fgets(line,10000,fp)!=NULL){
-            if (line[0]=='#') continue; // comment line
-            if (line[0]=='\n') continue;
-                nbin_cf++;
-            }
-            printf("\n# Found %d radial bins in the correlation function binning file\n",nbin_cf);
-            rewind(fp); // restart file
-
-            // Now allocate memory to the weights array
-            int ec=0;
-            ec+=posix_memalign((void **) &radial_bins_low_cf, PAGE, sizeof(Float)*nbin_cf);
-            ec+=posix_memalign((void **) &radial_bins_high_cf, PAGE, sizeof(Float)*nbin_cf);
-            assert(ec==0);
-
-            int line_count=0; // line counter
-            int counter=0; // counts which element in line
-
-            // Read in values to file
-            while (fgets(line,100000,fp)!=NULL) {
-                // Select required lines in file
-                if (line[0]=='#') continue;
-                if (line[0]=='\n') continue;
-
-                // Split into variables
-                char * split_string;
-                split_string = strtok(line, "\t");
-                counter=0;
-
-                // Iterate over line
-                while (split_string!=NULL){
-                    if(counter==0){
-                        radial_bins_low_cf[line_count]=atof(split_string);
-                        }
-                    if(counter==1){
-                        radial_bins_high_cf[line_count]=atof(split_string);
-                        }
-                    if(counter>1){
-                        fprintf(stderr,"Incorrect file format");
-                        abort();
-                    }
-                    split_string = strtok(NULL,"\t");
-                    counter++;
-                }
-                line_count++;
-
-            }
-
-            rmin_cf = radial_bins_low_cf[0];
-            rmax_cf = radial_bins_high_cf[line_count-1];
-            assert(line_count==nbin_cf);
-    }
-
-
-
-
-    void read_radial_binning(char* binfile_name){
+    
+    void read_radial_binning(char* binfile_name, Float *& radial_bins_low, Float *& radial_bins_high, Float& rmin, Float& rmax, int& nbin){
         // Read the radial binning file and determine the number of bins
+        // Unified function for short, long and correllation function binning
         char line[100000];
 
         FILE *fp;
