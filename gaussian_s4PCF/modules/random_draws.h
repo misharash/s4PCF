@@ -125,12 +125,7 @@ public:
 
 //		Initialize second sampler
 
-#ifdef THREE_PCF
-        // we need greater separations for the 3PCF since these are sometimes used as xi legs as well as radial legs
-		int maxsep = ceil(fmax(2*par->rmax,par->xicutoff)/boxside);
-#else
         int maxsep = ceil(2*par->rmax/boxside);
-#endif
 		nsidecube = 2 * maxsep + 1;
 		long nn=0;
 
