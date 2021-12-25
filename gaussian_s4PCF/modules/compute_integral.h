@@ -8,7 +8,7 @@
 class compute_integral{
 
     private:
-        uint64 cnt2=0,cnt3=0,cnt4=0;
+        uint64 cnt4=0;
         int nbin, mbin;
 
 
@@ -154,9 +154,9 @@ class compute_integral{
 
             Integrals sumint(par, cf12, cf13, cf24, JK12, JK23, JK34, I1, I2, I3, I4); // total integral
 
-            uint64 tot_pairs=0, tot_triples=0, tot_quads=0; // global number of particle pairs/triples/quads used (including those rejected for being in the wrong bins)
-            uint64 cell_attempt2=0,cell_attempt3=0,cell_attempt4=0; // number of j,k,l cells attempted
-            uint64 used_cell2=0,used_cell3=0,used_cell4=0; // number of used j,k,l cells
+            uint64 tot_quads=0; // global number of particle pairs/triples/quads used (including those rejected for being in the wrong bins)
+            uint64 cell_attempt4=0; // number of j,k,l cells attempted
+            uint64 used_cell4=0; // number of used j,k,l cells
 
             check_threads(par,1); // Define which threads we use
 
@@ -171,7 +171,7 @@ class compute_integral{
 
 #ifdef OPENMP
 
-    #pragma omp parallel firstprivate(steps,par,printtime,grid1,grid2,grid3,grid4,cf12,cf13,cf24) shared(sumint,TotalTime,gsl_rng_default,rd13,rd24,JK12,JK23,JK34) reduction(+:convergence_counter,cell_attempt2,cell_attempt3,cell_attempt4,used_cell2,used_cell3,used_cell4,tot_pairs,tot_triples,tot_quads)
+    #pragma omp parallel firstprivate(steps,par,printtime,grid1,grid2,grid3,grid4,cf12,cf13,cf24) shared(sumint,TotalTime,gsl_rng_default,rd13,rd24,JK12,JK23,JK34) reduction(+:convergence_counter,cell_attempt4,used_cell4,tot_quads)
             { // start parallel loop
             // Decide which thread we are in
             int thread = omp_get_thread_num();
@@ -215,14 +215,14 @@ class compute_integral{
             ec+=posix_memalign((void **) &w_ijk, PAGE, sizeof(Float)*mnp);
             assert(ec==0);
 
-            uint64 loc_used_pairs,loc_used_triples, loc_used_quads; // local counts of used pairs/triples/quads
+            uint64 loc_used_quads; // local counts of used pairs/triples/quads
     //-----------START FIRST LOOP-----------
     #ifdef OPENMP
     #pragma omp for schedule(dynamic)
     #endif
             for (int n_loops = 0; n_loops<par->max_loops; n_loops++){
                 percent_counter=0.;
-                loc_used_pairs=0; loc_used_triples=0; loc_used_quads=0;
+                loc_used_quads=0;
 
                 // End loops early if convergence has been acheived
                 if (convergence_counter==10){
@@ -246,14 +246,10 @@ class compute_integral{
 
                     if(pln==0) continue; // skip if empty
 
-                    loc_used_pairs+=pln*par->N2;
-                    loc_used_triples+=pln*par->N2*par->N3;
                     loc_used_quads+=pln*par->N2*par->N3*par->N4;
 
                     // LOOP OVER N2 J CELLS
                     for (int n2=0; n2<par->N2; n2++){
-                        cell_attempt2+=1; // new cell attempted
-
                         // Draw second cell from i weighted by 1/r^2
                         delta2 = rd13->random_cubedraw(locrng, &p2); // can use any rd class here since drawing as 1/r^2
                         // p2 is the ratio of sampling to true pair distribution here
@@ -262,15 +258,11 @@ class compute_integral{
                         x = draw_particle(sec_id, particle_j, pid_j, cell_sep2, grid2, sln, locrng, sln1, sln2);
                         if(x==1) continue; // skip if error
 
-                        used_cell2+=1; // new cell accepted
-
                         // For all particles
                         p2*=1./(grid1->np*(double)sln); // probability is divided by total number of i particles and number of particles in cell
 
                         // LOOP OVER N3 K CELLS
                         for (int n3=0; n3<par->N3; n3++){
-                            cell_attempt3+=1; // new third cell attempted
-
                             // Draw third cell from i weighted by xi(r)
                             delta3 = rd13->random_xidraw(locrng, &p3); // use 1-3 random draw class here for xi_13
                             thi_id = prim_id + delta3;
@@ -278,8 +270,6 @@ class compute_integral{
                             x = draw_particle_without_class(thi_id,particle_k,pid_k,cell_sep3,grid3,tln,locrng); // draw from third grid
                             if(x==1) continue;
                             if(pid_j==pid_k) continue;
-
-                            used_cell3+=1; // new third cell used
 
                             p3*=p2/(double)tln; // update probability
 
@@ -307,8 +297,6 @@ class compute_integral{
                 }
 
                 // Update used pair/triple/quad counts
-                tot_pairs+=loc_used_pairs;
-                tot_triples+=loc_used_triples;
                 tot_quads+=loc_used_quads;
 
     #ifdef OPENMP
@@ -338,11 +326,11 @@ class compute_integral{
                 char output_string[50];
                 sprintf(output_string,"%d", n_loops);
 
-                locint.normalize(grid1->norm,grid2->norm,grid3->norm,grid4->norm,(Float)loc_used_pairs, (Float)loc_used_triples, (Float)loc_used_quads);
+                locint.normalize(grid1->norm,grid2->norm,grid3->norm,grid4->norm, (Float)loc_used_quads);
 
                 locint.save_integrals(output_string,0);
 
-                locint.sum_total_counts(cnt2, cnt3, cnt4);
+                locint.sum_total_counts(cnt4);
                 locint.reset();
                 }
 
@@ -360,20 +348,18 @@ class compute_integral{
         TotalTime.Stop();
 
         // Normalize the accumulated results, using the RR counts
-        sumint.normalize(grid1->norm,grid2->norm,grid3->norm,grid4->norm,(Float)tot_pairs, (Float)tot_triples,(Float)tot_quads);
+        sumint.normalize(grid1->norm,grid2->norm,grid3->norm,grid4->norm,(Float)tot_quads);
 
         int runtime = TotalTime.Elapsed();
         printf("\n\nINTEGRAL %d OF %d COMPLETE\n",iter_no,tot_iter);
         fprintf(stderr, "\nTotal process time for %.2e sets of cells and %.2e quads of particles: %d s, i.e. %2.2d:%2.2d:%2.2d hms\n", double(used_cell4),double(tot_quads),runtime, runtime/3600,runtime/60%60,runtime%60);
-        printf("We tried %.2e pairs, %.2e triples and %.2e quads of cells.\n",double(cell_attempt2),double(cell_attempt3),double(cell_attempt4));
-        printf("Of these, we accepted %.2e pairs, %.2e triples and %.2e quads of cells.\n",double(used_cell2),double(used_cell3),double(used_cell4));
-        printf("We sampled %.2e pairs, %.2e triples and %.2e quads of particles.\n",double(tot_pairs),double(tot_triples),double(tot_quads));
-        printf("Of these, we have integral contributions from %.2e pairs, %.2e triples and %.2e quads of particles.\n",double(cnt2),double(cnt3),double(cnt4));
-        printf("Cell acceptance ratios are %.3f for pairs, %.3f for triples and %.3f for quads.\n",(double)used_cell2/cell_attempt2,(double)used_cell3/cell_attempt3,(double)used_cell4/cell_attempt4);
+        printf("We tried %.2e quads of cells.\n",double(cell_attempt4));
+        printf("Of these, we accepted %.2e quads of cells.\n",double(used_cell4));
+        printf("We sampled %.2e quads of particles.\n",double(tot_quads));
+        printf("Of these, we have integral contributions from %.2e quads of particles.\n",double(cnt4));
+        printf("Cell acceptance ratio is %.3f for quads.\n",(double)used_cell4/cell_attempt4);
 
-        printf("Acceptance ratios are %.3f for pairs, %.3f for triples and %.3f for quads.\n",(double)cnt2/tot_pairs,(double)cnt3/tot_triples,(double)cnt4/tot_quads);
-
-        printf("Average of %.2f pairs accepted per primary particle.\n\n",(Float)cnt2/grid1->np);
+        printf("Acceptance ratio is %.3f for quads.\n",(double)cnt4/tot_quads);
 
         printf("\nTrial speed: %.2e quads per core per second\n",double(tot_quads)/(runtime*double(par->nthread)));
         printf("Acceptance speed: %.2e quads per core per second\n",double(cnt4)/(runtime*double(par->nthread)));
@@ -381,7 +367,7 @@ class compute_integral{
         char out_string[5];
         sprintf(out_string,"full");
         sumint.save_integrals(out_string,1); // save integrals to file
-        sumint.save_counts(tot_pairs,tot_triples,tot_quads); // save total pair/triple/quads attempted to file
+        sumint.save_counts(tot_quads); // save total pair/triple/quads attempted to file
 
         fflush(NULL);
         return;

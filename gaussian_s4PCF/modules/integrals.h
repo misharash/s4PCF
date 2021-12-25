@@ -19,7 +19,7 @@ private:
     bool box,rad=0; // Flags to decide whether we have a periodic box + if we have a radial correlation function only
     int I1, I2, I3, I4; // indices for which fields to use for each particle
 
-    uint64 *binct, *binct3, *binct4; // Arrays to accumulate bin counts
+    uint64 *binct4; // Array to accumulate bin counts
 
 public:
     Integrals(){};
@@ -45,8 +45,6 @@ public:
         int ec=0;
         // Initialize the binning
         ec+=posix_memalign((void **) &c4, PAGE, sizeof(double)*nbin*mbin*nbin*mbin);
-        ec+=posix_memalign((void **) &binct, PAGE, sizeof(uint64)*nbin*mbin);
-        ec+=posix_memalign((void **) &binct3, PAGE, sizeof(uint64)*nbin*mbin*nbin*mbin);
         ec+=posix_memalign((void **) &binct4, PAGE, sizeof(uint64)*nbin*mbin*nbin*mbin);
 
         assert(ec==0);
@@ -70,18 +68,12 @@ public:
 
     ~Integrals() {
         free(c4);
-        free(binct);
-        free(binct3);
         free(binct4);
     }
 
     void reset(){
-        for (int j=0; j<nbin*mbin; j++) {
-            binct[j] = 0;
-        }
         for (int j=0; j<nbin*mbin*nbin*mbin; j++) {
             c4[j]=0;
-            binct3[j] = 0;
             binct4[j] = 0;
         }
     }
@@ -156,12 +148,8 @@ public:
     void sum_ints(Integrals* ints) {
         // Add the values accumulated in ints to the corresponding internal sums
         for(int i=0;i<nbin*mbin;i++){
-            binct[i]+=ints->binct[i];
-        }
-        for(int i=0;i<nbin*mbin;i++){
             for(int j=0;j<nbin*mbin;j++){
                 c4[i*nbin*mbin+j]+=ints->c4[i*nbin*mbin+j];
-                binct3[i*nbin*mbin+j]+=ints->binct3[i*nbin*mbin+j];
                 binct4[i*nbin*mbin+j]+=ints->binct4[i*nbin*mbin+j];
             }
         }
@@ -192,17 +180,15 @@ public:
         frobC4=100.*(diff_c4/self_c4);
         }
 
-    void sum_total_counts(uint64& acc2, uint64& acc3, uint64& acc4){
+    void sum_total_counts(uint64& acc4){
         // Add local counts to total bin counts in acc2-4
         for (int i=0; i<nbin*mbin; i++) {
-            acc2+=binct[i];
             for (int j=0; j<nbin*mbin; j++) {
-                acc3+=binct3[i*nbin*mbin+j];
                 acc4+=binct4[i*nbin*mbin+j];
             }
         }
     }
-    void normalize(Float norm1, Float norm2, Float norm3, Float norm4, Float n_pairs, Float n_triples, Float n_quads){
+    void normalize(Float norm1, Float norm2, Float norm3, Float norm4, Float n_quads){
         // Normalize the accumulated integrals (partly done by the normalising probabilities used from the selected cubes)
         // n_pair etc. are the number of PARTICLE pairs etc. attempted (not including rejected cells, but including pairs which don't fall in correct bin ranges)
         // To avoid recomputation
@@ -224,14 +210,12 @@ public:
             }
         }
     }
-    void save_counts(uint64 pair_counts,uint64 triple_counts,uint64 quad_counts){
+    void save_counts(uint64 quad_counts){
         // Print the counts for each integral (used for combining the estimates outside of C++)
         // This is the number of counts used in each loop [always the same]
         char counts_file[1000];
         snprintf(counts_file, sizeof counts_file, "%sCovMatricesAll/total_counts_n%d_m%d_%d%d,%d%d.txt",out_file,nbin,mbin,I1,I2,I3,I4);
         FILE * CountsFile = fopen(counts_file,"w");
-        fprintf(CountsFile,"%llu\n",pair_counts);
-        fprintf(CountsFile,"%llu\n",triple_counts);
         fprintf(CountsFile,"%llu\n",quad_counts);
 
         fflush(NULL);
@@ -267,29 +251,13 @@ public:
             snprintf(binname,sizeof binname, "%sCovMatricesAll/binct_c4_n%d_m%d_%d%d,%d%d_%s.txt",out_file, nbin,mbin,I1,I2,I3,I4,suffix);
             FILE * BinFile = fopen(binname,"w");
 
-            char bin3name[1000];
-            snprintf(bin3name,sizeof bin3name, "%sCovMatricesAll/binct_c3_n%d_m%d_%d,%d%d_%s.txt",out_file, nbin,mbin,I2,I1,I3,suffix);
-            FILE * Bin3File = fopen(bin3name,"w");
-
-            char bin2name[1000];
-            snprintf(bin2name,sizeof bin2name, "%sCovMatricesAll/binct_c2_n%d_m%d_%d%d_%s.txt",out_file, nbin,mbin,I1,I2,suffix);
-            FILE * Bin2File = fopen(bin2name,"w");
-
-            for (int j=0;j<nbin*mbin;j++){
-                fprintf(Bin2File,"%llu\n",binct[j]);
-            }
-
             for(int i=0;i<nbin*mbin;i++){
                 for(int j=0;j<nbin*mbin;j++){
                     fprintf(BinFile,"%llu\t",binct4[i*nbin*mbin+j]);
-                    fprintf(Bin3File,"%llu\t",binct3[i*nbin*mbin+j]);
                     }
                 fprintf(BinFile,"\n");
-                fprintf(Bin3File,"\n");
             }
             fclose(BinFile);
-            fclose(Bin2File);
-            fclose(Bin3File);
         }
     }
 
