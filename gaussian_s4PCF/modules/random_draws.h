@@ -15,9 +15,11 @@ public:
 	static CorrelationFunction *corr;
 	int nside;     // Number of cells in each direction of large draw
 	int nsidecube; // Number of cells in each direction of maxsep cube
+	int nsidecube_long; // Number of cells in each direction of long maxsep cube
 	double boxside;
     double *x; // Probability grid for 1/r^2 kernel
 	double *xcube; // Probability grid for xi(r) kernel
+	double *xcube_long; // Probability grid for xi(r) kernel, longer length
 
 	private:
 		// Sampling of long distance
@@ -26,6 +28,9 @@ public:
 		// Sampling of short distance
 		ransampl_ws* cube;
 
+		// Sampling of longer distance
+		ransampl_ws* cube_long;
+
     public:
         void copy(RandomDraws *rd){
             // Copy a random draws object and allocate the sampler.
@@ -33,17 +38,21 @@ public:
 
             nside=rd->nside;
             nsidecube=rd->nsidecube;
+            nsidecube_long=rd->nsidecube_long;
             boxside=rd->boxside;
 
             // Allocate memory:
             int x_size=pow(nside,3);
             int xcube_size = pow(nsidecube,3);
+            int xcube_long_size = pow(nsidecube_long,3);
             x = (double *)malloc(sizeof(double)*x_size);
 			xcube = (double *)malloc(sizeof(double)*xcube_size);
+			xcube_long = (double *)malloc(sizeof(double)*xcube_long_size);
 
             // Read in x, xcube arrays:
             for(int i=0;i<x_size;i++) x[i]=rd->x[i];
             for(int i=0;i<xcube_size;i++) xcube[i]=rd->xcube[i];
+            for(int i=0;i<xcube_long_size;i++) xcube_long[i]=rd->xcube_long[i];
 
             // Set up actual samplers
             ws = ransampl_alloc(x_size);
@@ -52,6 +61,10 @@ public:
             // Set up actual sampler
             cube = ransampl_alloc(xcube_size);
             ransampl_set(cube, xcube);
+
+            // Set up actual sampler
+            cube_long = ransampl_alloc(xcube_long_size);
+            ransampl_set(cube_long, xcube_long);
         }
 
 
@@ -144,14 +157,38 @@ public:
 			xcube[i]/=sum;
 		}
 
+
+//		Initialize third sampler
+
+        int maxsep_long = ceil(2*par->rmax_long/boxside);
+		nsidecube_long = 2 * maxsep_long + 1;
+		long nn_long=0;
+
+        compute_r2_prob(&xcube_long,&nn_long,nsidecube_long,boxside);
+
+        // Set up actual sampler
+		cube_long = ransampl_alloc( nn_long );
+		ransampl_set( cube_long, xcube_long );
+
+		// Normalize grid probabilities to one
+		sum=0.;
+		for(int i=0;i<nn;i++){
+            sum+=xcube_long[i];
+		}
+		for(int i=0;i<nn;i++){
+			xcube_long[i]/=sum;
+		}
+
 		}
 
 
 ~RandomDraws() {
 		ransampl_free( ws );
 		ransampl_free( cube );
+		ransampl_free( cube_long );
 		free(x);
 		free(xcube);
+		free(xcube_long);
 	}
 
 		integer3 random_xidraw(gsl_rng* rng, double* p){
@@ -166,6 +203,13 @@ public:
 			int n=ransampl_draw( cube, gsl_rng_uniform(rng), gsl_rng_uniform(rng) );
 			*p=xcube[n];
 			return cubifyindex(nsidecube,n);
+		}
+
+		integer3 random_cubedraw_long(gsl_rng* rng, double* p){
+			// Can be used to draw only a subset of the boxes within maxsep
+			int n=ransampl_draw( cube_long, gsl_rng_uniform(rng), gsl_rng_uniform(rng) );
+			*p=xcube_long[n];
+			return cubifyindex(nsidecube_long,n);
 		}
 
 		// Undo 1d back to 3-d indexing

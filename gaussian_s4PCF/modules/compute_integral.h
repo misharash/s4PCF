@@ -251,7 +251,7 @@ class compute_integral{
                     // LOOP OVER N2 J CELLS
                     for (int n2=0; n2<par->N2; n2++){
                         // Draw second cell from i weighted by 1/r^2
-                        delta2 = rd13->random_cubedraw(locrng, &p2); // can use any rd class here since drawing as 1/r^2
+                        delta2 = rd13->random_cubedraw_long(locrng, &p2); // can use any rd class here since drawing as 1/r^2
                         // p2 is the ratio of sampling to true pair distribution here
                         sec_id = prim_id + delta2;
                         cell_sep2 = grid2->cell_sep(delta2);
@@ -264,7 +264,7 @@ class compute_integral{
                         // LOOP OVER N3 K CELLS
                         for (int n3=0; n3<par->N3; n3++){
                             // Draw third cell from i weighted by xi(r)
-                            delta3 = rd13->random_xidraw(locrng, &p3); // use 1-3 random draw class here for xi_13
+                            delta3 = rd13->random_cubedraw(locrng, &p3); // use 1-3 random draw class here for xi_13
                             thi_id = prim_id + delta3;
                             cell_sep3 = grid3->cell_sep(delta3);
                             x = draw_particle_without_class(thi_id,particle_k,pid_k,cell_sep3,grid3,tln,locrng); // draw from third grid
@@ -278,7 +278,7 @@ class compute_integral{
                                 cell_attempt4+=1; // new fourth cell attempted
 
                                 // Draw fourth cell from j cell weighted by xi_24(r)
-                                delta4 = rd24->random_xidraw(locrng,&p4);
+                                delta4 = rd24->random_cubedraw(locrng,&p4);
                                 x = draw_particle_without_class(sec_id+delta4,particle_l,pid_l,cell_sep2+grid4->cell_sep(delta4),grid4,fln,locrng); // draw from 4th grid
                                 if(x==1) continue;
                                 if((pid_l==pid_j)||(pid_l==pid_k)) continue;
