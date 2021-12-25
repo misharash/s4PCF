@@ -192,8 +192,6 @@ class compute_integral{
             int* prim_ids; // list of particle IDs in primary cell
             double p2,p3,p4; // probabilities
 
-            Float p22,p21; // probabilities
-
             int *bin_ij; // i-j separation bin
             int mnp = grid1->maxnp; // max number of particles in a grid1 cell
             Float *xi_ik, *w_ijk, *w_ij; // arrays to store xi and weight values
@@ -266,15 +264,8 @@ class compute_integral{
 
                         used_cell2+=1; // new cell accepted
 
-                        // Probabilities for two random-particle partitions
-                        p21=p2/(grid1->np1*(double)sln1); // divide probability by total number of particles in 1st partition and number in cell
-                        p22=p2/(grid1->np2*(double)sln2); // for partition 2
-
                         // For all particles
                         p2*=1./(grid1->np*(double)sln); // probability is divided by total number of i particles and number of particles in cell
-
-                        // Compute C2 integral
-                        locint.second(prim_list, prim_ids, pln, particle_j, pid_j, bin_ij, w_ij, p2, p21, p22);
 
                         // LOOP OVER N3 K CELLS
                         for (int n3=0; n3<par->N3; n3++){
@@ -291,9 +282,6 @@ class compute_integral{
                             used_cell3+=1; // new third cell used
 
                             p3*=p2/(double)tln; // update probability
-
-                            // Compute third integral
-                            locint.third(prim_list, prim_ids, pln, particle_j, particle_k, pid_j, pid_k, bin_ij, w_ij, xi_ik, w_ijk, p3);
 
                             // LOOP OVER N4 L CELLS
                             for (int n4=0; n4<par->N4; n4++){
