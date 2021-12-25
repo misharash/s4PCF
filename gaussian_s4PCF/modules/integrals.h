@@ -10,8 +10,8 @@
 class Integrals{
 private:
     CorrelationFunction *cf12, *cf13, *cf24;
-    Float rmin,rmax,mumin,mumax,dmu; //Ranges in r and mu
-    Float *r_high, *r_low; // Max and min of each radial bin
+    Float rmin,rmax,rmin_long,rmax_long,mumin,mumax,dmu; //Ranges in r and mu
+    Float *r_high, *r_low, *r_high_long, *r_low_long; // Max and min of each radial bin
     int nbin, nbin_long, mbin;
     int Nbin, Nbinpairs, N4;
     Float *c4; // Array to accumulate integral
@@ -60,11 +60,17 @@ public:
         rmax=par->rmax;
         rmin=par->rmin;
 
+        rmax_long=par->rmax_long;
+        rmin_long=par->rmin_long;
+
         mumax=par->mumax;
         mumin=par->mumin;
 
         r_high = par->radial_bins_high;
         r_low = par->radial_bins_low;
+
+        r_high_long = par->radial_bins_high_long;
+        r_low_long = par->radial_bins_low_long;
 
         dmu=(mumax-mumin)/mbin;
 
@@ -99,31 +105,68 @@ public:
         return which_bin*mbin + floor((mu-mumin)/dmu);
     }
 
-    inline void fourth(const Particle* pi_list, const int* prim_ids, const int pln, const Particle pj, const Particle pk, const Particle pl, const int pj_id, const int pk_id, const int pl_id, const int* bin_ij, const Float* wijk, const Float* xi_ik, const double prob){
+    inline int getbin_pair(int bin1, int bin2){
+        int i = bin1, j = bin2;
+        if (j < i) {
+            i = bin2;
+            j = bin1;
+        }
+        return j + Nbin*i - i * (i-1) / 2;
+    }
+
+    inline int getbin_long(Float r, Float mu){
+        // Linearizes 2D indices
+        // First define which r bin we are in;
+        int which_bin = -1; // default if outside bins
+        for(int i=0;i<nbin;i++){
+            if((r>r_low_long[i])&&(r<r_high_long[i])){
+                which_bin=i;
+                break;
+            }
+            if((i==nbin-1)&&(r>r_high[i])){
+                which_bin=nbin; // if above top bin
+            }
+        }
+        return which_bin;
+    }
+
+    inline void fourth(const Particle* pi_list, const int* prim_ids, const int pln, const Particle pj, const Particle pk, const Particle pl, const int pj_id, const int pk_id, const int pl_id, const double prob){
         // Accumulates the four point integral C4.
         // First define variables
         Particle pi;
-        Float rjl_mag, rjl_mu, rkl_mag, rkl_mu, c4v, xi_jl, tmp_weight;
-        int tmp_bin, tmp_full_bin, max_bin = nbin*mbin;
+        Float rjl_mag, rjl_mu, rkl_mag, rkl_mu, rij_mag, rij_mu, rik_mag, rik_mu, ril_mag, ril_mu, rjk_mag, rjk_mu, c4v, tmp_weight;
+        int bin_jl, tmp_full_bin;
         cleanup_l(pl.pos,pk.pos,rkl_mag,rkl_mu);
-        
-        tmp_bin = getbin(rkl_mag,rkl_mu);
-
-        if ((tmp_bin<0)||(tmp_bin>=max_bin)) return; // if not in correct bin
+        Float xi_kl = cf24->xi(rkl_mag, rkl_mu); // should be cf34 in general but that does not exist yet
         cleanup_l(pl.pos,pj.pos,rjl_mag,rjl_mu);
-        xi_jl = cf24->xi(rjl_mag, rjl_mu); // j-l correlation
+        bin_jl = getbin(rjl_mag,rjl_mu);
+        if ((bin_jl<0)||(bin_jl>=Nbin)) return; // if not in correct bin
+        Float xi_jl = cf24->xi(rjl_mag, rjl_mu); // j-l correlation
+        cleanup_l(pk.pos,pj.pos,rjk_mag,rjk_mu);
+        Float xi_jk = cf24->xi(rjk_mag, rjk_mu); // should be cf23 in general but that does not exist yet
 
         for(int i=0;i<pln;i++){ // Iterate over particle in pi_list
-            if(wijk[i]==-1) continue; // skip incorrect bins / ij self counts
+            if(((prim_ids[i]==pj_id)&&(I1==I2))||((prim_ids[i]==pk_id)&&(I1==I3))) continue; // skip ij/ik self counts
             if(((prim_ids[i]==pl_id)&&(I1==I4))||((pj_id==pl_id)&&(I2==I4))||((pk_id==pl_id)&&(I3==I4))) continue; // don't self-count
 
             pi = pi_list[i];
-            tmp_weight = wijk[i]*pl.w; // product of weights, w_i*w_j*w_k*w_l
+            Float wijk = pi.w*pj.w*pk.w;
+            tmp_weight = wijk*pl.w; // product of weights, w_i*w_j*w_k*w_l
+
+            cleanup_l(pi.pos, pj.pos, rij_mag, rij_mu);
+            int bin_ij = getbin_long(rij_mag, rij_mu);
+            if ((bin_ij<0)||(bin_ij>=nbin_long)) continue; // if not in correct bin
+            Float xi_ij = cf12->xi(rij_mag, rij_mu);
+            cleanup_l(pi.pos, pk.pos, rik_mag, rik_mu);
+            int bin_ik = getbin(rik_mag, rik_mu);
+            if ((bin_ik<0)||(bin_ik>=Nbin)) continue; // if not in correct bin
+            Float xi_ik = cf13->xi(rik_mag, rik_mu);
+            cleanup_l(pi.pos, pl.pos, ril_mag, ril_mu);
+            Float xi_il = cf12->xi(ril_mag, ril_mu); // should be cf14 in general, but that does not exist yet
+            tmp_full_bin = bin_ij*Nbinpairs + getbin_pair(bin_ik, bin_jl);
 
             // Now compute the integral;
-            c4v = tmp_weight/prob*2.*xi_ik[i]*xi_jl; // with xi_ik*xi_jl = xi_il*xi_jk symmetry factor
-            // Compute jackknife weight tensor:
-            tmp_full_bin = bin_ij[i]*mbin*nbin+tmp_bin;
+            c4v = tmp_weight/prob*(xi_ik*xi_jl + xi_ij*xi_kl + xi_il*xi_jk); // with xi_ik*xi_jl = xi_il*xi_jk symmetry factor
             // Add to local counts
             c4[tmp_full_bin]+=c4v;
             binct4[tmp_full_bin]++;

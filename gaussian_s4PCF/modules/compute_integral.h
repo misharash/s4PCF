@@ -289,7 +289,7 @@ class compute_integral{
 
 
                                 // Now compute the four-point integral
-                                locint.fourth(prim_list, prim_ids, pln, particle_j, particle_k, particle_l, pid_j, pid_k, pid_l, bin_ij, w_ijk, xi_ik, p4);
+                                locint.fourth(prim_list, prim_ids, pln, particle_j, particle_k, particle_l, pid_j, pid_k, pid_l, p4);
 
                             }
                         }
