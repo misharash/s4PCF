@@ -253,9 +253,37 @@ public:
         // Create output files
 
         char c4name[1000];
-        snprintf(c4name, sizeof c4name, "%sCovMatricesAll/c4_n%d_m%d_%d%d,%d%d_%s.txt", out_file, nbin, mbin, I1,I2,I3,I4,suffix);
+        snprintf(c4name, sizeof c4name, "%s/zeta4_connected_nlong%d_n%d_m%d_%d%d,%d%d_%s.txt", out_file, nbin_long, nbin, mbin, I1,I2,I3,I4,suffix);
 
         FILE * C4File = fopen(c4name,"w"); // for c4 part of integral
+
+        // First print the indices of the bins
+        for (int i = 0; i < nbin_long; i++) {
+            for (int j = 0; j < Nbin; j++) {
+                for (int k = j; k < Nbin; k++) {
+                    fprintf(C4File, "%2d\t", i);
+                }
+            }
+        }
+        fprintf(C4File, "\n");
+
+        for (int i = 0; i < nbin_long; i++) {
+            for (int j = 0; j < Nbin; j++) {
+                for (int k = j; k < Nbin; k++) {
+                    fprintf(C4File, "%2d\t", j);
+                }
+            }
+        }
+        fprintf(C4File, "\n");
+
+        for (int i = 0; i < nbin_long; i++) {
+            for (int j = 0; j < Nbin; j++) {
+                for (int k = j; k < Nbin; k++) {
+                    fprintf(C4File, "%2d\t", k);
+                }
+            }
+        }
+        fprintf(C4File, "\n");
 
         for(int i=0; i<N4; i++) {
             fprintf(C4File,"%le\t",c4[i]);
@@ -269,8 +297,36 @@ public:
 
         if(save_all==1){
             char binname[1000];
-            snprintf(binname,sizeof binname, "%sCovMatricesAll/binct_c4_n%d_m%d_%d%d,%d%d_%s.txt",out_file, nbin,mbin,I1,I2,I3,I4,suffix);
+            snprintf(binname,sizeof binname, "%s/binct_zeta4_nlong%d_n%d_m%d_%d%d,%d%d_%s.txt",out_file, nbin_long,nbin,mbin,I1,I2,I3,I4,suffix);
             FILE * BinFile = fopen(binname,"w");
+
+            // First print the indices of the bins
+            for (int i = 0; i < nbin_long; i++) {
+                for (int j = 0; j < Nbin; j++) {
+                    for (int k = j; k < Nbin; k++) {
+                        fprintf(BinFile, "%2d\t", i);
+                    }
+                }
+            }
+            fprintf(BinFile, "\n");
+
+            for (int i = 0; i < nbin_long; i++) {
+                for (int j = 0; j < Nbin; j++) {
+                    for (int k = j; k < Nbin; k++) {
+                        fprintf(BinFile, "%2d\t", j);
+                    }
+                }
+            }
+            fprintf(BinFile, "\n");
+
+            for (int i = 0; i < nbin_long; i++) {
+                for (int j = 0; j < Nbin; j++) {
+                    for (int k = j; k < Nbin; k++) {
+                        fprintf(BinFile, "%2d\t", k);
+                    }
+                }
+            }
+            fprintf(BinFile, "\n");
 
             for(int i=0; i<N4; i++) {
                 fprintf(BinFile,"%llu\t",binct4[i]);
