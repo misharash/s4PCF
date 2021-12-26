@@ -58,7 +58,7 @@ public:
 
      // Name of the RR bin file
     char *RR_bin_file = NULL; // RR_{aA}^{11} file
-    const char default_RR_bin_file[500] = "weights/RR_counts_n36_m1_11.txt";
+    const char default_RR_bin_file[500] = "weights/RR_counts_n30_m1_11.txt";
 
     //---------- PRECISION PARAMETERS ---------------------------------------
 
