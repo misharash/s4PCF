@@ -36,7 +36,7 @@ public:
 
     // Output directory
     char *out_file = NULL;
-    const char default_out_file[500] = "./";
+    const char default_out_file[500] = "./out";
 
     // The number of mu bins in the correlation function
     int mbin_cf = 120;
@@ -402,17 +402,12 @@ private:
 	    if (mkdir(out_file,S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)==0){
             printf("\nCreating output directory\n");
         }
-	    char cname[1000];
 
-	    snprintf(cname, sizeof cname, "%sCovMatricesAll/",out_file);
-
-        if (mkdir(cname,S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0){
-            }
         // Check if this was successful:
         struct stat info;
 
-        if( stat( cname, &info ) != 0 ){
-            printf( "\nCreation of directory %s failed\n", cname);
+        if( stat( out_file, &info ) != 0 ){
+            printf( "\nCreation of directory %s failed\n", out_file);
             exit(1);
         }
     }
