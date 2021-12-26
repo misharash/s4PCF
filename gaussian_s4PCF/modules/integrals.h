@@ -81,6 +81,7 @@ public:
 
     ~Integrals() {
         free(c4);
+        free(norm4);
         free(binct4);
     }
 
