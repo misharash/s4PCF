@@ -87,7 +87,8 @@ public:
 
     void reset(){
         for (int j=0; j<N4; j++) {
-            c4[j]=0;
+            c4[j] = 0;
+            norm4[j] = 0;
             binct4[j] = 0;
         }
     }
