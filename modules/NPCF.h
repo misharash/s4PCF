@@ -177,14 +177,17 @@ class NPCF {
         }
     }
 
+    inline int getbin_pair(int i, int j) { // needs i <= j
+        return j + NBIN*i - i * (i-1) / 2;
+    }
+
     inline void excl_3pcf(int bin, Float wprod) {
         // wprod is product of weights
 
         // delete 3PCF self-count
         ExclTimer3.Start();
 
-        int i = bin, j = bin;
-        int index = j + NBIN*i - i * (i-1) / 2;
+        int index = getbin_pair(bin, bin);
         threepcf[index] -= wprod;
 
         ExclTimer3.Stop();
@@ -214,9 +217,8 @@ class NPCF {
 
         ExclTimer4_triangle.Start();
 
-        int i = bin, j = bin2; // i <= j
-        if (i <= j) {
-            int index = j + NBIN*i - i * (i-1) / 2;
+        if (bin <= bin2) {
+            int index = getbin_pair(bin, bin2);
             fourpcf[bin_long * N3PCF + index] -= wprod;
         }
 
@@ -232,13 +234,11 @@ class NPCF {
 
         // Iterate over second bin
         for (int bin2 = 0; bin2 <= bin; bin2++) {
-            int i = bin2, j = bin; // i <= j
-            int index = j + NBIN*i - i * (i-1) / 2;
+            int index = getbin_pair(bin2, bin); // bin2 <= bin
             fourpcf[bin_long * N3PCF + index] -= pair->xi0[bin2] * wprod;
         }
         for (int bin2 = bin; bin2 < NBIN; bin2++) { // go over bin=bin2 second time for consistency
-            int i = bin, j = bin2; // i <= j
-            int index = j + NBIN*i - i * (i-1) / 2;
+            int index = getbin_pair(bin, bin2); // bin <= bin2
             fourpcf[bin_long * N3PCF + index] -= pair->xi0[bin2] * wprod;
         }
         // End of radial binning loops
@@ -252,8 +252,7 @@ class NPCF {
 
         ExclTimer4_tripleside.Start();
 
-        int i = bin, j = bin; // i <= j
-        int index = j + NBIN*i - i * (i-1) / 2;
+        int index = getbin_pair(bin, bin);
         fourpcf[bin_long * N3PCF + index] += wprod * wprod;
         
         ExclTimer4_tripleside.Stop();
