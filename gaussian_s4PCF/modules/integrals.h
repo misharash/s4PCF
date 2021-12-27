@@ -118,16 +118,15 @@ public:
     }
 
     inline int getbin_long(Float r, Float mu){
-        // Linearizes 2D indices
-        // First define which r bin we are in;
+        // Define which r bin we are in;
         int which_bin = -1; // default if outside bins
-        for(int i=0;i<nbin;i++){
+        for(int i=0; i<nbin_long; i++){
             if((r>r_low_long[i])&&(r<r_high_long[i])){
                 which_bin=i;
                 break;
             }
-            if((i==nbin-1)&&(r>r_high[i])){
-                which_bin=nbin; // if above top bin
+            if((i==nbin_long-1)&&(r>r_high_long[i])){
+                which_bin=nbin_long; // if above top bin
             }
         }
         return which_bin;
