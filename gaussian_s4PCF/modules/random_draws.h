@@ -80,8 +80,8 @@ public:
 		corr=fun;
 
         // Define grid of nside up to the maximum xi cut-off scale (as a cubic grid)
-        Float box_min = fmin(fmin(par->rect_boxsize.x,par->rect_boxsize.y),par->rect_boxsize.z);
-        boxside=box_min/par->nside;
+        Float box_max = fmax(fmax(par->rect_boxsize.x,par->rect_boxsize.y),par->rect_boxsize.z);
+        boxside=box_max/par->nside;
         nside=2*ceil(par->xicutoff/boxside)+1;
 
 		// If precalculated grid has been saved, load it
