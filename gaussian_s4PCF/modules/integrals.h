@@ -115,7 +115,7 @@ public:
             i = bin2;
             j = bin1;
         }
-        return j + Nbin*i - i * (i-1) / 2;
+        return j + Nbin*i - i * (i+1) / 2;
     }
 
     inline int getbin_long(Float r, Float mu){
