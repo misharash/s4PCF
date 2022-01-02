@@ -294,7 +294,7 @@ public:
 
 	    // Read in the radial binning for long side
         read_radial_binning(radial_bin_file_long, radial_bins_low_long, radial_bins_high_long, rmin_long, rmax_long, nbin_long);
-        printf("Read in %d radial bins in range (%.0f, %.0f) successfully.\n",nbin_cf,rmin_cf,rmax_cf);
+        printf("Read in %d radial bins in range (%.0f, %.0f) successfully.\n",nbin_long,rmin_long,rmax_long);
 
 	    // Read in the radial binning for correllation function
         read_radial_binning(radial_bin_file_cf, radial_bins_low_cf, radial_bins_high_cf, rmin_cf, rmax_cf, nbin_cf);
