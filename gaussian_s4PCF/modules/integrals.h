@@ -297,6 +297,20 @@ public:
         fclose(C4File);
 
         if(save_all==1){
+            char normname[1000];
+            snprintf(normname,sizeof normname, "%s/norm4_nlong%d_n%d_m%d_%d%d,%d%d_%s.txt",out_file, nbin_long,nbin,mbin,I1,I2,I3,I4,suffix);
+            FILE * NormFile = fopen(normname,"w");
+
+            for(int i=0; i<N4; i++) {
+                fprintf(NormFile,"%le\t",norm4[i]);
+            }
+            fprintf(NormFile,"\n");
+
+            fflush(NULL);
+
+            // Close open files
+            fclose(NormFile);
+
             char binname[1000];
             snprintf(binname,sizeof binname, "%s/binct_zeta4_nlong%d_n%d_m%d_%d%d,%d%d_%s.txt",out_file, nbin_long,nbin,mbin,I1,I2,I3,I4,suffix);
             FILE * BinFile = fopen(binname,"w");
