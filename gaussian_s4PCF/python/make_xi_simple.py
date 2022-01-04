@@ -12,7 +12,7 @@ mu = 0.5
 
 dirname = "xi_simple"
 os.makedirs(dirname, exist_ok=1)
-filename = os.path.join(dirname, "xi_n200_m1_11")
+filename = os.path.join(dirname, "xi_n200_m1_11.dat")
 
 header = " ".join([f"{rr:.8e}" for rr in r]) + "\n" + f"{mu:.8e}"
 np.savetxt(filename, xi, fmt='%.8e', comments='', header=header)
