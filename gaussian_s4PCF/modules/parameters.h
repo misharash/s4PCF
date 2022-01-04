@@ -21,7 +21,7 @@ public:
 
     // The name of the correlation function file for the first set of particles
 	char *corname = NULL;
-	const char default_corname[500] = "xi/xi_n200_m120_11.dat";
+	const char default_corname[500] = "xi_simple/xi_n200_m1_11.dat";
 
     // Name of the correlation function radial binning .csv file
     char *radial_bin_file_long = NULL;
@@ -39,7 +39,7 @@ public:
     const char default_out_file[500] = "./out_more";
 
     // The number of mu bins in the correlation function
-    int mbin_cf = 120;
+    int mbin_cf = 1;
 
     // The number of threads to run on
 	int nthread = 10;
