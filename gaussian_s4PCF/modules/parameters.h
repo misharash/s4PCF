@@ -39,7 +39,7 @@ public:
     const char default_out_file[500] = "./out_simple";
 
     // The number of mu bins in the correlation function
-    int mbin_cf = 1;
+    int mbin_cf = 10;
 
     // The number of threads to run on
 	int nthread = 10;
