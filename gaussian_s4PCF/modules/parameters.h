@@ -21,7 +21,7 @@ public:
 
     // The name of the correlation function file for the first set of particles
 	char *corname = NULL;
-	const char default_corname[500] = "xi_simple/xi_n200_m1_11.dat";
+	const char default_corname[500] = "xi_simple/xi_n200_m10_11.dat";
 
     // Name of the correlation function radial binning .csv file
     char *radial_bin_file_long = NULL;
