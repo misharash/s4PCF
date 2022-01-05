@@ -138,7 +138,7 @@ public:
 
 //		Initialize second sampler
 
-        int maxsep = ceil(2*par->rmax/boxside);
+        int maxsep = ceil(1.1*par->rmax/boxside);
 		nsidecube = 2 * maxsep + 1;
 		long nn=0;
 
@@ -160,7 +160,7 @@ public:
 
 //		Initialize third sampler
 
-        int maxsep_long = ceil(2*par->rmax_long/boxside);
+        int maxsep_long = ceil(1.1*par->rmax_long/boxside);
 		nsidecube_long = 2 * maxsep_long + 1;
 		long nn_long=0;
 
