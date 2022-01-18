@@ -328,7 +328,7 @@ class compute_integral{
 
                 locint.normalize();
 
-                locint.save_integrals(output_string,1);
+                locint.save_integrals(output_string,0);
 
                 locint.sum_total_counts(cnt4);
                 locint.reset();
