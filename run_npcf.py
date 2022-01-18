@@ -35,7 +35,9 @@ boxsize = 1000 # only used if periodic=1
 
 # File directories
 datafilenames = ["qpm_galaxies.xyzwj"] # data filenames
+dataroot = "qpm_galaxies"
 randomfilename = "qpm_randoms_10x.xyzwj" # random filename
+randomroot = "qpm_randoms"
 workdir = os.getcwd()
 indir = os.path.join(workdir, "gaussian_s4PCF") # input directory (see above for required contents)
 outdir = os.path.join(workdir, "out") # output file directory
@@ -119,7 +121,7 @@ for i in range(Nparts):
   # Compute R^N NPCF counts
   print_and_log(f"Starting R[{i}]^N")
   print_log(datetime.now())
-  outstr = f"{randomfilename}.{i}"
+  outstr = f"{randomroot}.{i}"
   filename = os.path.join(tmpdir, outstr)
   random_content = random_contents[random_parts_indices[i]] # select part of randoms
   np.savetxt(filename, random_content) # save part to file
@@ -134,7 +136,7 @@ for i in range(Nparts):
     # Compute (D-R)^N NCPF counts
     print_and_log(f"Starting (D[{j}]-R[{i}])^N")
     print_log(datetime.now())
-    outstr = f"{datafilename}.{i}"
+    outstr = f"{dataroot}.{j}.{i}"
     filename = os.path.join(tmpdir, outstr)
     data_content = np.loadtxt(os.path.join(indir, datafilename)) # read data
     np.savetxt(filename, np.concatenate((data_content, random_content))) # save data and random part to file
@@ -146,4 +148,25 @@ for i in range(Nparts):
   ### end for each data file
 ### end for each random part
 
+### Now need to combine the files to get the full NPCF estimate
+# We do this in another python script, and perform edge-correction unless the periodic flag is not set
+if periodic:
+  print("Combining files together without performing edge-corrections (using analytic R^N counts)")
+  # The script doesn't exist yet
+  print_and_log(os.popen(f"python python/combine_files_periodic_new.py {dataroot} {randomroot} {len(datafilenames)} {Nrandoms}").read())
+else:
+  print("Combining files together and performing edge-corrections")
+  print_and_log(os.popen(f"python python/combine_files_new.py {dataroot} {randomroot} {len(datafilenames)} {Nrandoms}").read())
+
+print_and_log(f"Finished with computation. Placing results into {outdir}/")
+print_log(datetime.now())
+print_log(os.popen("ls -l").read())
 errlog.close()
+os.system(f"cp {os.path.join(outdir, errfilename)} {os.path.normpath(tmpdir)}")
+# Now move the output files into the output directory.
+# Compress all the auxilliary files and copy
+os.chdir(tmpdir)
+os.system(f"tar cfz {dataroot}.tgz {dataroot}.*.out {randomroot}.*.out {dataroot}.*pc*.txt {randomroot}.*pc*.txt {errfilename} {scriptname}")
+os.chdir(workdir)
+os.system(f"mv {os.path.join(tmpdir, dataroot)}.tgz {os.path.join(tmpdir, dataroot)}.zeta_*pcf.txt {os.path.normpath(outdir)}/")
+os.system(f"rm -rf {tmpdir}")
