@@ -12,10 +12,8 @@
 ##########################################################
 
 import os
-import shutil
 from datetime import datetime
 import numpy as np
-from glob import glob
 import subprocess
 import shlex
 
@@ -57,13 +55,11 @@ if periodic:
   command += f" -boxsize {boxsize}"
 
 # Create a temporary directory for saving
-if os.path.isdir(tmpdir):
-  for fname in os.listdir(tmpdir):
-    os.remove(os.path.join(tmpdir, fname)) # Delete, just in case we have crud from a previous run.
+os.system(f"rm -rf {tmpdir}") # Delete, just in case we have crud from a previous run.
 os.makedirs(tmpdir, exist_ok=1)
 
 # Copy this script in for posterity
-shutil.copy2(scriptname, os.path.join(tmpdir, scriptname))
+os.system(f"cp {scriptname} {os.path.normpath(tmpdir)}")
 
 # Create output directory
 os.makedirs(outdir, exist_ok=1)
@@ -99,7 +95,8 @@ print_and_log(f"Divide randoms to {Nparts} part(s)")
 # first decide indices
 print("Creating random indices")
 random_indices = np.arange(Nrandoms)
-np.random.shuffle(random_indices)
+if Nparts>1:
+  np.random.shuffle(random_indices)
 random_parts_indices = [random_indices[i::Nparts] for i in range(Nparts)]
 print("Created random indices")
 # now read contents
@@ -111,10 +108,6 @@ random_contents[:, 3] *= -1 # negate the weights
 def run_and_save_output(cmd, fname):
   with open(fname, "w") as f:
     subprocess.run(shlex.split(cmd), stdout=f)
-
-def move_output_to_tmp(outstr):
-  for fname in glob(f"output/{outstr}_?pc*.txt"):
-    os.rename(fname, os.path.join(tmpdir, os.path.basename(fname)))
 
 ### Now for each of random parts
 for i in range(Nparts):
@@ -128,7 +121,7 @@ for i in range(Nparts):
   # run code
   run_and_save_output(f"{command} -in {filename} -outstr {outstr} -invert", os.path.join(tmpdir, f"{outstr}.out"))
   os.remove(filename) # clean up
-  move_output_to_tmp(outstr) # move output into the temporary dir
+  os.system(f"mv output/{outstr}_?pc*.txt {os.path.normpath(tmpdir)}/") # move output into the temporary dir
   print_and_log(f"Done with R[{i}]^N")
 
   ### Now for each data file
@@ -143,7 +136,7 @@ for i in range(Nparts):
     # run code
     run_and_save_output(f"{command} -in {filename} -outstr {outstr} -balance", os.path.join(tmpdir, f"{outstr}.out"))
     os.remove(filename) # clean up
-    move_output_to_tmp(outstr) # move output into the temporary dir
+    os.system(f"mv output/{outstr}_?pc*.txt {os.path.normpath(tmpdir)}/") # move output into the temporary dir
     print_and_log(f"Done with (D[{j}]-R[{i}])^N")
   ### end for each data file
 ### end for each random part
@@ -162,7 +155,7 @@ print_and_log(f"Finished with computation. Placing results into {outdir}/")
 print_log(datetime.now())
 print_log(os.popen("ls -l").read())
 errlog.close()
-os.system(f"cp {os.path.join(outdir, errfilename)} {os.path.normpath(tmpdir)}")
+os.system(f"cp {os.path.join(outdir, errfilename)} {os.path.normpath(tmpdir)}/")
 # Now move the output files into the output directory.
 # Compress all the auxilliary files and copy
 os.chdir(tmpdir)
