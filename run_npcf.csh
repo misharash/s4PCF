@@ -162,7 +162,7 @@ if ($periodic) then
   python python/combine_files_periodic.py $tmpout/$root $Ngal $boxsize $rmin $rmax >>& $errlog
 else
   echo Combining files together and performing edge-corrections
-  python python/combine_files.py $tmpout/$root >>& $errlog $OMP_NUM_THREADS
+  python python/combine_files.py $tmpout/$root >>& $errlog
 endif
 
 # Do some cleanup

@@ -1,22 +1,17 @@
 ### combine_files.py (Michael Rashkovetskyi, adapted from Oliver Philcox, 2021)
 # This reads in a set of (data-random) and (random) particle counts and uses them to construct the N-point functions, including edge-correction
 # It is designed to be used with the run_npcf.csh script
-# Currently 2PCF, 3PCF, 4PCF, 5PCF and 6PCF are supported. The code will try to load the edge correction coupling matrices from the coupling_matrices/ directory, and recompute them if not (using multithreading to speed up the 9j manipulations)
-# This can handle both odd and even parity NPCFs.
+# Currently 2PCF, 3PCF and 4PCF are supported.
 # The output is saved to the working directory with the same format as the NPCF counts, with the filename ...zeta_{N}pcf.txt
 
 import sys, os
-import subprocess
 import numpy as np
-import multiprocessing
-from sympy.physics.wigner import wigner_3j, wigner_9j
 
 ## First read-in the input file string from the command line
-if len(sys.argv)!=3:
-    raise Exception("Need to specify the input files and N_threads!")
+if len(sys.argv)!=2:
+    raise Exception("Need to specify the input files!")
 else:
     inputs = str(sys.argv[1])
-    threads = int(sys.argv[2])
 
 print("Reading in files starting with %s\n"%inputs)
 
@@ -55,7 +50,6 @@ for N in Ns:
 
     # Now load in D-R pieces and average
     countsN_all = []
-    total_DmR = 0
     for i in range(100):
         DmR_file = inputs+'.n%s_%dpcf.txt'%(str(i).zfill(2),N)
         if not os.path.exists(DmR_file): continue
