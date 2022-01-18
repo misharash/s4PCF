@@ -66,9 +66,9 @@ public:
     int max_loops = 10;
 
     // Number of random cells to draw at each stage
-    int N2 = 10; // number of j cells per i cell
-    int N3 = 20; // number of k cells per j cell
-    int N4 = 40; // number of l cells per k cell
+    int N2 = 20; // number of j cells per i cell
+    int N3 = 40; // number of k cells per j cell
+    int N4 = 80; // number of l cells per k cell
 
     //------------------ GENERAL MULTI-FIELD PARAMETERS ----------------------
 
