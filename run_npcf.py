@@ -73,7 +73,7 @@ errlog = os.path.join(outdir, errfilename)
 def print_and_log(s):
   print(s)
   print_log(s)
-print_log = lambda l: os.system(f"echo {l} >> {errlog}")
+print_log = lambda l: os.system(f"echo \"{l}\" >> {errlog}")
 
 print_and_log(datetime.now())
 print_log(f"Executing {__file__}")
