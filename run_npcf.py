@@ -157,13 +157,15 @@ else:
 
 print_and_log(f"Finished with computation. Placing results into {outdir}/")
 print_log(datetime.now())
+os.chdir(tmpdir)
 print_log(os.popen("ls -l").read())
 errlog.close()
-os.system(f"cp {os.path.join(outdir, errfilename)} {os.path.normpath(tmpdir)}/")
+os.system(f"cp {os.path.join(outdir, errfilename)} ./")
 # Now move the output files into the output directory.
 # Compress all the auxilliary files and copy
-os.chdir(tmpdir)
 os.system(f"tar cfz {outroot}.tgz {outroot}.*.out {outroot}.*pc*.txt {errfilename} {scriptname}")
 os.chdir(workdir)
 os.system(f"mv {os.path.join(tmpdir, outroot)}.tgz {os.path.join(tmpdir, outroot)}.zeta_*pcf.txt {os.path.normpath(outdir)}/")
+
+# Destroy temporary dir
 os.system(f"rm -rf {tmpdir}")
