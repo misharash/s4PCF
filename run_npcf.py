@@ -32,7 +32,7 @@ ngrid = 50 # grid size for accelerating pair count
 boxsize = 1000 # only used if periodic=1
 
 # File names and directories
-datafilenames = [f"qpm_galaxies/{i+1:04d}.xyzwj" for i in range(50)] # data filenames
+datafilenames = [f"qpm_galaxies/{i+1:04d}.xyz" for i in range(50)] # data filenames
 randomfilename = "qpm_randoms_50x.xyzwj" # random filename
 outroot = "qpm_galaxies" # base name for outputs
 workdir = os.getcwd()
