@@ -69,15 +69,16 @@ os.makedirs(outdir, exist_ok=1)
 # Create an output file for errors
 errfilename = "errlog"
 errlog = os.path.join(outdir, errfilename)
-print_log = lambda l: os.system(f"echo {l} >> {errlog}")
-print_log(datetime.now())
-print_log(f"Executing {__file__}")
-print_log(command)
-print_log(OMP_NUM_THREADS)
 
 def print_and_log(s):
   print(s)
   print_log(s)
+print_log = lambda l: os.system(f"echo {l} >> {errlog}")
+
+print_and_log(datetime.now())
+print_log(f"Executing {__file__}")
+print_log(command)
+print_log(OMP_NUM_THREADS)
 
 print("Starting Computation")
 
@@ -104,17 +105,18 @@ if do_full:
   random_parts_indices = [random_indices[i::Nparts] for i in range(Nparts)]
   print("Created random indices")
   # now read contents
-  print("Reading random file")
+  print_and_log("Reading random file")
+  print_and_log(datetime.now())
   random_contents = np.loadtxt(os.path.join(indir, randomfilename), usecols=range(4))
   # use only X, Y, Z coords and weights (4 first columns), consistently with data reading
-  print("Read random file")
+  print_and_log("Read random file")
   random_contents[:, 3] *= -1 # negate the weights
 
 ### Now for each of random parts
 for i in range(Nparts*do_full): # skip if do_full is false
   # Compute R^N NPCF counts
   print_and_log(f"Starting R[{i}]^N")
-  print_log(datetime.now())
+  print_and_log(datetime.now())
   outstr = f"{outroot}.r{i}"
   filename = os.path.join(tmpdir, outstr)
   random_content = random_contents[random_parts_indices[i]] # select part of randoms
@@ -129,7 +131,7 @@ for i in range(Nparts*do_full): # skip if do_full is false
   for j, datafilename in enumerate(datafilenames):
     # Compute (D-R)^N NCPF counts
     print_and_log(f"Starting (D[{j}]-R[{i}])^N")
-    print_log(datetime.now())
+    print_and_log(datetime.now())
     outstr = f"{outroot}.{j}.n{i}"
     filename = os.path.join(tmpdir, outstr)
     data_content = np.loadtxt(os.path.join(indir, datafilename), usecols=range(4)) # read data
