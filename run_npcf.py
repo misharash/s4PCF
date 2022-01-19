@@ -42,6 +42,8 @@ outdir = os.path.join(workdir, "out") # output file directory
 tmpdir = os.path.join(workdir, "tmp") # temporary directory for intermediate file storage for this run (ideally somewhere with fast I/O)
 scriptname = "run_npcf.py"
 
+do_full = 0 # whether do full computation or only combine existing intermediate files
+
 ##########################################################
 
 # Set number of threads (does it work?)
@@ -55,7 +57,8 @@ if periodic:
   command += f" -boxsize {boxsize}"
 
 # Create a temporary directory for saving
-os.system(f"rm -rf {tmpdir}") # Delete, just in case we have crud from a previous run.
+if do_full:
+  os.system(f"rm -rf {tmpdir}") # Delete, just in case we have crud from a previous run.
 os.makedirs(tmpdir, exist_ok=1)
 
 # Copy this script in for posterity
@@ -91,26 +94,28 @@ Ngal_avg = sum(Ngals)/len(Ngals)
 Nparts = int(np.ceil(Nrandoms/Ngal_avg))
 print_and_log(f"Divide randoms to {Nparts} part(s)")
 
-### Divide randoms to desired number of parts, randomly
-# first decide indices
-print("Creating random indices")
-random_indices = np.arange(Nrandoms)
-if Nparts>1:
-  np.random.shuffle(random_indices)
-random_parts_indices = [random_indices[i::Nparts] for i in range(Nparts)]
-print("Created random indices")
-# now read contents
-print("Reading random file")
-random_contents = np.loadtxt(os.path.join(indir, randomfilename))
-print("Read random file")
-random_contents[:, 3] *= -1 # negate the weights
+if do_full:
+  ### Divide randoms to desired number of parts, randomly
+  # skip if only need to combine
+  # first decide indices
+  print("Creating random indices")
+  random_indices = np.arange(Nrandoms)
+  if Nparts>1:
+    np.random.shuffle(random_indices)
+  random_parts_indices = [random_indices[i::Nparts] for i in range(Nparts)]
+  print("Created random indices")
+  # now read contents
+  print("Reading random file")
+  random_contents = np.loadtxt(os.path.join(indir, randomfilename))
+  print("Read random file")
+  random_contents[:, 3] *= -1 # negate the weights
 
 def run_and_save_output(cmd, fname):
   with open(fname, "w") as f:
     subprocess.run(shlex.split(cmd), stdout=f)
 
 ### Now for each of random parts
-for i in range(Nparts):
+for i in range(Nparts*do_full): # skip if do_full is false
   # Compute R^N NPCF counts
   print_and_log(f"Starting R[{i}]^N")
   print_log(datetime.now())
