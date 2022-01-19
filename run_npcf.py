@@ -7,7 +7,7 @@
 # In the input directory, we expect one or many plain text files {datafilenames} and one random catalog {randomfilename}; all in xyzw (4 columns, 3D coords and weight, space or tab-separated) format
 # Data and/or random files can have extra columns (e.g. jackknife region numbers), those will be just ignored
 # We do NOT expect the summed weights to be the same for the data and each random catalog, the random weights must NOT be negative
-# This script will compute the D^N counts, the (D-R)^N counts for 32 random subsets, and the R^N counts for one subset (should be sufficient).
+# This script will compute the D^N counts, the (D-R)^N and the R^N counts for Nparts random subsets, Nparts determined automatically such that number of random particles in set is close to number of data particles.
 # The output will be a set of .zeta_{N}pcf.txt files in the specified directory as well as a .tgz compressed directory of other intermediary outputs
 # It is important to check the errlog file in the output directory to make sure all went well!
 ##########################################################
