@@ -45,8 +45,9 @@ do_full = 0 # whether do full computation or only combine existing intermediate 
 
 ##########################################################
 
-# Set number of threads (does it work?)
+# Set OpenMP number of threads
 OMP_NUM_THREADS = 4
+os.environ["OMP_NUM_THREADS"] = str(OMP_NUM_THREADS)
 
 # Define command to run the C++ code
 code = "./s4PCF"
