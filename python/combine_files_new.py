@@ -16,8 +16,6 @@ else:
     Ndata = int(sys.argv[3])
     Nrandoms = int(sys.argv[4])
 
-print("Reading in files starting with %s\n"%inputs)
-
 def get_script_path():
     return os.path.dirname(os.path.realpath(sys.argv[0]))
 
@@ -29,7 +27,7 @@ for N in range(10):
         Ns.append(N)
 
 if len(Ns)==0:
-    raise Exception("No files found with input string %s.0"%random_input)
+    raise Exception("No files found with input string %s.0"%randomroot)
 
 for N in Ns:
     # First load in R piece
@@ -51,13 +49,13 @@ for N in Ns:
         if N==2:
             countsR_all.append(np.loadtxt(R_file,skiprows=5))
         elif N==3:
-            countsN_all.append(np.loadtxt(R_file,skiprows=6)) # skipping rows with radial bins and ell
+            countsR_all.append(np.loadtxt(R_file,skiprows=6)) # skipping rows with radial bins and ell
         elif N==4:
-            countsN_all.append(np.loadtxt(R_file,skiprows=9))
+            countsR_all.append(np.loadtxt(R_file,skiprows=9))
     countsR_all = np.asarray(countsR_all)
     countsR = np.mean(countsR_all,axis=0)
 
-    R_file = random_input+'.0_%dpcf.txt'%N
+    R_file = randomroot+'.0_%dpcf.txt'%N
 
     for j in range(Ndata):
         # Now load in D-R pieces and average

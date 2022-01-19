@@ -151,10 +151,10 @@ for i in range(Nparts*do_full): # skip if do_full is false
 if periodic:
   print("Combining files together without performing edge-corrections (using analytic R^N counts)")
   # The script doesn't exist yet
-  print_and_log(os.popen(f"python python/combine_files_periodic_new.py {dataroot} {randomroot} {len(datafilenames)} {Nrandoms}").read())
+  print_and_log(os.popen(f"python python/combine_files_periodic_new.py {os.path.join(tmpdir, dataroot)} {os.path.join(tmpdir, randomroot)} {len(datafilenames)} {Nparts}").read())
 else:
   print("Combining files together and performing edge-corrections")
-  print_and_log(os.popen(f"python python/combine_files_new.py {dataroot} {randomroot} {len(datafilenames)} {Nrandoms}").read())
+  print_and_log(os.popen(f"python python/combine_files_new.py {os.path.join(tmpdir, dataroot)} {os.path.join(tmpdir, randomroot)} {len(datafilenames)} {Nparts}").read())
 
 print_and_log(f"Finished with computation. Placing results into {outdir}/")
 print_log(datetime.now())
@@ -166,5 +166,5 @@ os.system(f"cp {os.path.join(outdir, errfilename)} {os.path.normpath(tmpdir)}/")
 os.chdir(tmpdir)
 os.system(f"tar cfz {dataroot}.tgz {dataroot}.*.out {randomroot}.*.out {dataroot}.*pc*.txt {randomroot}.*pc*.txt {errfilename} {scriptname}")
 os.chdir(workdir)
-os.system(f"mv {os.path.join(tmpdir, dataroot)}.tgz {os.path.join(tmpdir, dataroot)}.zeta_*pcf.txt {os.path.normpath(outdir)}/")
+os.system(f"mv {os.path.join(tmpdir, dataroot)}.tgz {os.path.join(tmpdir, dataroot)}.*.zeta_*pcf.txt {os.path.normpath(outdir)}/")
 os.system(f"rm -rf {tmpdir}")
