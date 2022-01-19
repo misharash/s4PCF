@@ -5,6 +5,7 @@
 # The script should be run from the code directory
 # This is adapted from a similar script by Daniel Eisenstein.
 # In the input directory, we expect one or many plain text files {datafilenames} and one random catalog {randomfilename}; all in xyzw (4 columns, 3D coords and weight, space or tab-separated) format
+# Data and/or random files can have extra columns (e.g. jackknife region numbers), those will be just ignored
 # We do NOT expect the summed weights to be the same for the data and each random catalog, the random weights must NOT be negative
 # This script will compute the D^N counts, the (D-R)^N counts for 32 random subsets, and the R^N counts for one subset (should be sufficient).
 # The output will be a set of .zeta_{N}pcf.txt files in the specified directory as well as a .tgz compressed directory of other intermediary outputs
@@ -106,7 +107,8 @@ if do_full:
   print("Created random indices")
   # now read contents
   print("Reading random file")
-  random_contents = np.loadtxt(os.path.join(indir, randomfilename))
+  random_contents = np.loadtxt(os.path.join(indir, randomfilename), usecols=range(4))
+  # use only X, Y, Z coords and weights (4 first columns), consistently with data reading
   print("Read random file")
   random_contents[:, 3] *= -1 # negate the weights
 
@@ -136,7 +138,8 @@ for i in range(Nparts*do_full): # skip if do_full is false
     print_log(datetime.now())
     outstr = f"{outroot}.{j}.n{i}"
     filename = os.path.join(tmpdir, outstr)
-    data_content = np.loadtxt(os.path.join(indir, datafilename)) # read data
+    data_content = np.loadtxt(os.path.join(indir, datafilename), usecols=range(4)) # read data
+    # use only X, Y, Z coords and weights (4 first columns), consistently with randoms reading
     np.savetxt(filename, np.concatenate((data_content, random_content))) # save data and random part to file
     # run code
     run_and_save_output(f"{command} -in {filename} -outstr {outstr} -balance", os.path.join(tmpdir, f"{outstr}.out"))
