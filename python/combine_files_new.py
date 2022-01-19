@@ -8,13 +8,12 @@ import sys, os
 import numpy as np
 
 ## First read-in the input file string from the command line
-if len(sys.argv)!=5:
-    raise Exception("Need to specify the data root, random root, number of data and of randoms!")
+if len(sys.argv)!=4:
+    raise Exception("Need to specify the input root (base name), number of data and of randoms!")
 else:
-    dataroot = str(sys.argv[1])
-    randomroot = str(sys.argv[2])
-    Ndata = int(sys.argv[3])
-    Nrandoms = int(sys.argv[4])
+    inroot = str(sys.argv[1])
+    Ndata = int(sys.argv[2])
+    Nrandoms = int(sys.argv[3])
 
 def get_script_path():
     return os.path.dirname(os.path.realpath(sys.argv[0]))
@@ -22,16 +21,16 @@ def get_script_path():
 # Decide which N we're using
 Ns = []
 for N in range(10):
-    R_file = randomroot+'.0_%dpcf.txt'%N
+    R_file = inroot+'.r0_%dpcf.txt'%N
     if os.path.exists(R_file):
         Ns.append(N)
 
 if len(Ns)==0:
-    raise Exception("No files found with input string %s.0"%randomroot)
+    raise Exception("No files found with input string %s.r0"%inroot)
 
 for N in Ns:
     # First load in R piece
-    R_file = randomroot+'.0_%dpcf.txt'%N
+    R_file = inroot+'.r0_%dpcf.txt'%N
     # Extract radial bins
     if N==2:
         bin1 = np.loadtxt(R_file,skiprows=4,max_rows=1)
@@ -44,7 +43,7 @@ for N in Ns:
     
     countsR_all = []
     for i in range(Nrandoms):
-        R_file = randomroot+'.%d_%dpcf.txt'%(i, N)
+        R_file = inroot+'.r%d_%dpcf.txt'%(i, N)
         # Extract counts
         if N==2:
             countsR_all.append(np.loadtxt(R_file,skiprows=5))
@@ -55,13 +54,13 @@ for N in Ns:
     countsR_all = np.asarray(countsR_all)
     countsR = np.mean(countsR_all,axis=0)
 
-    R_file = randomroot+'.0_%dpcf.txt'%N
+    R_file = inroot+'.r0_%dpcf.txt'%N
 
     for j in range(Ndata):
         # Now load in D-R pieces and average
         countsN_all = []
         for i in range(Nrandoms):
-            DmR_file = dataroot+'.%d.%d_%dpcf.txt'%(j, i, N)
+            DmR_file = inroot+'.%d.n%d_%dpcf.txt'%(j, i, N)
             # Extract counts
             if N==2:
                 countsN_all.append(np.loadtxt(DmR_file,skiprows=5))
@@ -79,7 +78,7 @@ for N in Ns:
             zeta = countsN/countsR
 
             # Now save the output to file, copying the first few lines from the N files
-            zeta_file = dataroot+'.%d.zeta_%dpcf.txt'%(j, N)
+            zeta_file = inroot+'.%d.zeta_%dpcf.txt'%(j, N)
             rfile = open(R_file,"r")
             zfile = open(zeta_file,"w")
             for l,line in enumerate(rfile):
@@ -94,7 +93,7 @@ for N in Ns:
             zeta = countsN/countsR
 
             # Now save the output to file, copying the first few lines from the N files
-            zeta_file = dataroot+'.%d.zeta_%dpcf.txt'%(j, N)
+            zeta_file = inroot+'.%d.zeta_%dpcf.txt'%(j, N)
             rfile = open(R_file,"r")
             zfile = open(zeta_file,"w")
             for l,line in enumerate(rfile):
@@ -109,7 +108,7 @@ for N in Ns:
             zeta = countsN/countsR
 
             # Now save the output to file, copying the first few lines from the N files
-            zeta_file = dataroot+'.%d.zeta_%dpcf.txt'%(j, N)
+            zeta_file = inroot+'.%d.zeta_%dpcf.txt'%(j, N)
             rfile = open(R_file,"r")
             zfile = open(zeta_file,"w")
             for l,line in enumerate(rfile):
@@ -119,4 +118,4 @@ for N in Ns:
                 zfile.write("%.8e\t"%zeta[a])
             zfile.close()
 
-        print("Computed %dPCF using %d (data-random) files, saving to %s\n"%(N,Nrandoms,zeta_file))
+        print("Computed %dPCF using %d (random-random and data-random) files, saving to %s\n"%(N,Nrandoms,zeta_file))
