@@ -15,8 +15,6 @@
 import os
 from datetime import datetime
 import numpy as np
-import subprocess
-import shlex
 
 ##################### INPUT PARAMETERS ###################
 
@@ -70,8 +68,8 @@ os.makedirs(outdir, exist_ok=1)
 
 # Create an output file for errors
 errfilename = "errlog"
-errlog = open(os.path.join(outdir, errfilename), "w")
-print_log = lambda l: errlog.write(str(l)+'\n')
+errlog = os.path.join(outdir, errfilename)
+print_log = lambda l: os.system(f"echo {l} >> {errlog}")
 print_log(datetime.now())
 print_log(f"Executing {__file__}")
 print_log(command)
@@ -112,10 +110,6 @@ if do_full:
   print("Read random file")
   random_contents[:, 3] *= -1 # negate the weights
 
-def run_and_save_output(cmd, fname):
-  with open(fname, "w") as f:
-    subprocess.run(shlex.split(cmd), stdout=f)
-
 ### Now for each of random parts
 for i in range(Nparts*do_full): # skip if do_full is false
   # Compute R^N NPCF counts
@@ -125,8 +119,8 @@ for i in range(Nparts*do_full): # skip if do_full is false
   filename = os.path.join(tmpdir, outstr)
   random_content = random_contents[random_parts_indices[i]] # select part of randoms
   np.savetxt(filename, random_content) # save part to file
-  # run code
-  run_and_save_output(f"{command} -in {filename} -outstr {outstr} -invert", os.path.join(tmpdir, f"{outstr}.out"))
+  # run code, forward output to separate file
+  os.system(f"{command} -in {filename} -outstr {outstr} -invert >> {os.path.join(tmpdir, outstr)}.out")
   os.remove(filename) # clean up
   os.system(f"mv output/{outstr}_?pc*.txt {os.path.normpath(tmpdir)}/") # move output into the temporary dir
   print_and_log(f"Done with R[{i}]^N")
@@ -141,8 +135,8 @@ for i in range(Nparts*do_full): # skip if do_full is false
     data_content = np.loadtxt(os.path.join(indir, datafilename), usecols=range(4)) # read data
     # use only X, Y, Z coords and weights (4 first columns), consistently with randoms reading
     np.savetxt(filename, np.concatenate((data_content, random_content))) # save data and random part to file
-    # run code
-    run_and_save_output(f"{command} -in {filename} -outstr {outstr} -balance", os.path.join(tmpdir, f"{outstr}.out"))
+    # run code, forward output to separate file
+    os.system(f"{command} -in {filename} -outstr {outstr} -balance >> {os.path.join(tmpdir, outstr)}.out")
     os.remove(filename) # clean up
     os.system(f"mv output/{outstr}_?pc*.txt {os.path.normpath(tmpdir)}/") # move output into the temporary dir
     print_and_log(f"Done with (D[{j}]-R[{i}])^N")
@@ -154,21 +148,22 @@ for i in range(Nparts*do_full): # skip if do_full is false
 if periodic:
   print("Combining files together without performing edge-corrections (using analytic R^N counts)")
   # The script doesn't exist yet
-  print_and_log(os.popen(f"python python/combine_files_periodic_new.py {os.path.join(tmpdir, outroot)} {len(datafilenames)} {Nparts}").read())
+  os.system(f"python python/combine_files_periodic_new.py {os.path.join(tmpdir, outroot)} {len(datafilenames)} {Nparts} | tee -a {errlog}")
 else:
   print("Combining files together and performing edge-corrections")
-  print_and_log(os.popen(f"python python/combine_files_new.py {os.path.join(tmpdir, outroot)} {len(datafilenames)} {Nparts}").read())
+  # run script, print output to stdout AND append to errlog
+  os.system(f"python python/combine_files_new.py {os.path.join(tmpdir, outroot)} {len(datafilenames)} {Nparts} | tee -a {errlog}")
 
 print_and_log(f"Finished with computation. Placing results into {outdir}/")
 print_log(datetime.now())
 os.chdir(tmpdir)
-print_log(os.popen("ls -l").read())
-errlog.close()
-os.system(f"cp {os.path.join(outdir, errfilename)} ./")
-# Now move the output files into the output directory.
+os.system(f"ls -l >> {errlog}") # list tmpdir contents
+# finished writing log, now copy it to tmpdir, we are in it now
+os.system(f"cp {errlog} ./")
 # Compress all the auxilliary files and copy
 os.system(f"tar cfz {outroot}.tgz {outroot}.*.out {outroot}.*pc*.txt {errfilename} {scriptname}")
 os.chdir(workdir)
+# Now move the output files into the output directory.
 os.system(f"mv {os.path.join(tmpdir, outroot)}.tgz {os.path.join(tmpdir, outroot)}.zeta_*pcf.txt {os.path.normpath(outdir)}/")
 
 # Destroy temporary dir
