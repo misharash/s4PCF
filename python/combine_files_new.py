@@ -56,20 +56,31 @@ for N in Ns:
 
     R_file = inroot+'.r0_%dpcf.txt'%N
 
-    for j in range(Ndata):
-        # Now load in D-R pieces and average
-        countsN_all = []
-        for i in range(Nrandoms):
-            DmR_file = inroot+'.%d.n%d_%dpcf.txt'%(j, i, N)
-            # Extract counts
-            if N==2:
-                countsN_all.append(np.loadtxt(DmR_file,skiprows=5))
-            elif N==3:
-                countsN_all.append(np.loadtxt(DmR_file,skiprows=6)) # skipping rows with radial bins and ell
-            elif N==4:
-                countsN_all.append(np.loadtxt(DmR_file,skiprows=9))
-        countsN_all = np.asarray(countsN_all)
-        countsN = np.mean(countsN_all,axis=0)
+    countsN_alldata = []
+    for j in range(Ndata+1): # extra iteration to do average among all data
+        if j<Ndata:
+            # Now load in D-R pieces and average
+            countsN_all = []
+            for i in range(Nrandoms):
+                DmR_file = inroot+'.%d.n%d_%dpcf.txt'%(j, i, N)
+                # Extract counts
+                if N==2:
+                    countsN_all.append(np.loadtxt(DmR_file,skiprows=5))
+                elif N==3:
+                    countsN_all.append(np.loadtxt(DmR_file,skiprows=6)) # skipping rows with radial bins and ell
+                elif N==4:
+                    countsN_all.append(np.loadtxt(DmR_file,skiprows=9))
+            countsN_all = np.asarray(countsN_all)
+            countsN = np.mean(countsN_all,axis=0)
+            countsN_alldata.append(countsN)
+        else: # do average among all data in the last iteration
+            countsN_alldata = np.asarray(countsN_alldata)
+            countsN = np.mean(countsN_alldata,axis=0)
+        
+        # set output file name - format does not depend on N
+        zeta_file = inroot+'.%d.zeta_%dpcf.txt'%(j, N)
+        if j==Ndata: # if we average over data
+            zeta_file = inroot+'.zeta_%dpcf.txt'%N
 
         # Now compute edge-correction equations
 
@@ -78,7 +89,6 @@ for N in Ns:
             zeta = countsN/countsR
 
             # Now save the output to file, copying the first few lines from the N files
-            zeta_file = inroot+'.%d.zeta_%dpcf.txt'%(j, N)
             rfile = open(R_file,"r")
             zfile = open(zeta_file,"w")
             for l,line in enumerate(rfile):
@@ -93,7 +103,6 @@ for N in Ns:
             zeta = countsN/countsR
 
             # Now save the output to file, copying the first few lines from the N files
-            zeta_file = inroot+'.%d.zeta_%dpcf.txt'%(j, N)
             rfile = open(R_file,"r")
             zfile = open(zeta_file,"w")
             for l,line in enumerate(rfile):
@@ -108,7 +117,6 @@ for N in Ns:
             zeta = countsN/countsR
 
             # Now save the output to file, copying the first few lines from the N files
-            zeta_file = inroot+'.%d.zeta_%dpcf.txt'%(j, N)
             rfile = open(R_file,"r")
             zfile = open(zeta_file,"w")
             for l,line in enumerate(rfile):
@@ -118,4 +126,7 @@ for N in Ns:
                 zfile.write("%.8e\t"%zeta[a])
             zfile.close()
 
-        print("Computed %dPCF using %d (random-random and data-random) files, saving to %s\n"%(N,Nrandoms,zeta_file))
+        if j<Ndata:
+            print("Computed %dPCF using %d (random-random and data-random) files, saving to %s\n"%(N,Nrandoms,zeta_file))
+        else:
+            print("Averaged %dPCF using %d (data) files, saving to %s\n"%(N,Ndata,zeta_file))
