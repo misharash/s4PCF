@@ -95,7 +95,7 @@ Nparts = int(np.ceil(Nrandoms/Ngal_avg))
 print_and_log(f"Divide randoms to {Nparts} part(s)")
 
 if do_full:
-  ### Divide randoms to desired number of parts, randomly
+  # Divide randoms to desired number of parts, randomly
   # skip if only need to combine
   # first decide indices
   print("Creating random indices")
@@ -112,7 +112,8 @@ if do_full:
   print_and_log("Read random file")
   random_contents[:, 3] *= -1 # negate the weights
 
-### Now for each of random parts
+# First do R^N
+# for each random part
 for i in range(Nparts*do_full): # skip if do_full is false
   # Compute R^N NPCF counts
   print_and_log(f"Starting R[{i}]^N")
@@ -126,26 +127,34 @@ for i in range(Nparts*do_full): # skip if do_full is false
   os.remove(filename) # clean up
   os.system(f"mv output/{outstr}_?pc*.txt {os.path.normpath(tmpdir)}/") # move output into the temporary dir
   print_and_log(f"Done with R[{i}]^N")
+# end for each random part
 
-  ### Now for each data file
-  for j, datafilename in enumerate(datafilenames):
+# Now do (D-R)^N
+# for each data file
+for j, datafilename in enumerate(datafilenames*do_full): # skip if do_full is false
+  print_and_log(f"Reading data file {datafilename} [{j}]")
+  print_and_log(datetime.now())
+  data_content = np.loadtxt(os.path.join(indir, datafilename), usecols=range(4)) # read data
+  # use only X, Y, Z coords and weights (4 first columns), consistently with randoms reading
+  print_and_log(f"Read data file {datafilename} [{j}]")
+  # for each random part
+  for i in range(Nparts):
     # Compute (D-R)^N NCPF counts
     print_and_log(f"Starting (D[{j}]-R[{i}])^N")
     print_and_log(datetime.now())
     outstr = f"{outroot}.{j}.n{i}"
     filename = os.path.join(tmpdir, outstr)
-    data_content = np.loadtxt(os.path.join(indir, datafilename), usecols=range(4)) # read data
-    # use only X, Y, Z coords and weights (4 first columns), consistently with randoms reading
+    random_content = random_contents[random_parts_indices[i]] # select part of randoms
     np.savetxt(filename, np.concatenate((data_content, random_content))) # save data and random part to file
     # run code, forward output to separate file
     os.system(f"{command} -in {filename} -outstr {outstr} -balance >> {os.path.join(tmpdir, outstr)}.out")
     os.remove(filename) # clean up
     os.system(f"mv output/{outstr}_?pc*.txt {os.path.normpath(tmpdir)}/") # move output into the temporary dir
     print_and_log(f"Done with (D[{j}]-R[{i}])^N")
-  ### end for each data file
-### end for each random part
+  # end for each random part
+# end for each data file
 
-### Now need to combine the files to get the full NPCF estimate
+# Now need to combine the files to get the full NPCF estimate
 # We do this in another python script, and perform edge-correction unless the periodic flag is not set
 if periodic:
   print("Combining files together without performing edge-corrections (using analytic R^N counts)")
