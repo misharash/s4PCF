@@ -53,11 +53,11 @@ code = "./s4PCF"
 
 command = f"{code} -rmax {rmax} -rmin {rmin} -rmax_long {rmax_long} -rmin_long {rmin_long} -ngrid {ngrid} -scale {scale}"
 if periodic:
-  command += f" -boxsize {boxsize}"
+    command += f" -boxsize {boxsize}"
 
 # Create a temporary directory for saving
 if do_full:
-  os.system(f"rm -rf {tmpdir}") # Delete, just in case we have crud from a previous run.
+    os.system(f"rm -rf {tmpdir}") # Delete, just in case we have crud from a previous run.
 os.makedirs(tmpdir, exist_ok=1)
 
 # Copy this script in for posterity
@@ -71,8 +71,8 @@ errfilename = "errlog"
 errlog = os.path.join(outdir, errfilename)
 
 def print_and_log(s):
-  print(s)
-  print_log(s)
+    print(s)
+    print_log(s)
 print_log = lambda l: os.system(f"echo \"{l}\" >> {errlog}")
 
 print_and_log(datetime.now())
@@ -95,75 +95,75 @@ Nparts = int(np.ceil(Nrandoms/Ngal_avg))
 print_and_log(f"Divide randoms to {Nparts} part(s)")
 
 if do_full:
-  # Divide randoms to desired number of parts, randomly
-  # skip if only need to combine
-  # first decide indices
-  print("Creating random indices")
-  random_indices = np.arange(Nrandoms)
-  if Nparts>1:
-    np.random.shuffle(random_indices)
-  random_parts_indices = [random_indices[i::Nparts] for i in range(Nparts)]
-  print("Created random indices")
-  # now read contents
-  print_and_log("Reading random file")
-  print_and_log(datetime.now())
-  random_contents = np.loadtxt(os.path.join(indir, randomfilename), usecols=range(4))
-  # use only X, Y, Z coords and weights (4 first columns), consistently with data reading
-  print_and_log("Read random file")
-  random_contents[:, 3] *= -1 # negate the weights
+    # Divide randoms to desired number of parts, randomly
+    # skip if only need to combine
+    # first decide indices
+    print("Creating random indices")
+    random_indices = np.arange(Nrandoms)
+    if Nparts>1:
+        np.random.shuffle(random_indices)
+    random_parts_indices = [random_indices[i::Nparts] for i in range(Nparts)]
+    print("Created random indices")
+    # now read contents
+    print_and_log("Reading random file")
+    print_and_log(datetime.now())
+    random_contents = np.loadtxt(os.path.join(indir, randomfilename), usecols=range(4))
+    # use only X, Y, Z coords and weights (4 first columns), consistently with data reading
+    print_and_log("Read random file")
+    random_contents[:, 3] *= -1 # negate the weights
 
 # First do R^N
 # for each random part
 for i in range(Nparts*do_full): # skip if do_full is false
-  # Compute R^N NPCF counts
-  print_and_log(f"Starting R[{i}]^N")
-  print_and_log(datetime.now())
-  outstr = f"{outroot}.r{i}"
-  filename = os.path.join(tmpdir, outstr)
-  random_content = random_contents[random_parts_indices[i]] # select part of randoms
-  np.savetxt(filename, random_content) # save part to file
-  # run code, forward output to separate file
-  os.system(f"{command} -in {filename} -outstr {outstr} -invert >> {os.path.join(tmpdir, outstr)}.out")
-  os.remove(filename) # clean up
-  os.system(f"mv output/{outstr}_?pc*.txt {os.path.normpath(tmpdir)}/") # move output into the temporary dir
-  print_and_log(f"Done with R[{i}]^N")
+    # Compute R^N NPCF counts
+    print_and_log(f"Starting R[{i}]^N")
+    print_and_log(datetime.now())
+    outstr = f"{outroot}.r{i}"
+    filename = os.path.join(tmpdir, outstr)
+    random_content = random_contents[random_parts_indices[i]] # select part of randoms
+    np.savetxt(filename, random_content) # save part to file
+    # run code, forward output to separate file
+    os.system(f"{command} -in {filename} -outstr {outstr} -invert >> {os.path.join(tmpdir, outstr)}.out")
+    os.remove(filename) # clean up
+    os.system(f"mv output/{outstr}_?pc*.txt {os.path.normpath(tmpdir)}/") # move output into the temporary dir
+    print_and_log(f"Done with R[{i}]^N")
 # end for each random part
 
 # Now do (D-R)^N
 # for each data file
 for j, datafilename in enumerate(datafilenames*do_full): # skip if do_full is false
-  print_and_log(f"Reading data file {datafilename} [{j}]")
-  print_and_log(datetime.now())
-  data_content = np.loadtxt(os.path.join(indir, datafilename), usecols=range(4)) # read data
-  # use only X, Y, Z coords and weights (4 first columns), consistently with randoms reading
-  print_and_log(f"Read data file {datafilename} [{j}]")
-  # for each random part
-  for i in range(Nparts):
-    # Compute (D-R)^N NCPF counts
-    print_and_log(f"Starting (D[{j}]-R[{i}])^N")
+    print_and_log(f"Reading data file {datafilename} [{j}]")
     print_and_log(datetime.now())
-    outstr = f"{outroot}.{j}.n{i}"
-    filename = os.path.join(tmpdir, outstr)
-    random_content = random_contents[random_parts_indices[i]] # select part of randoms
-    np.savetxt(filename, np.concatenate((data_content, random_content))) # save data and random part to file
-    # run code, forward output to separate file
-    os.system(f"{command} -in {filename} -outstr {outstr} -balance >> {os.path.join(tmpdir, outstr)}.out")
-    os.remove(filename) # clean up
-    os.system(f"mv output/{outstr}_?pc*.txt {os.path.normpath(tmpdir)}/") # move output into the temporary dir
-    print_and_log(f"Done with (D[{j}]-R[{i}])^N")
-  # end for each random part
+    data_content = np.loadtxt(os.path.join(indir, datafilename), usecols=range(4)) # read data
+    # use only X, Y, Z coords and weights (4 first columns), consistently with randoms reading
+    print_and_log(f"Read data file {datafilename} [{j}]")
+    # for each random part
+    for i in range(Nparts):
+        # Compute (D-R)^N NCPF counts
+        print_and_log(f"Starting (D[{j}]-R[{i}])^N")
+        print_and_log(datetime.now())
+        outstr = f"{outroot}.{j}.n{i}"
+        filename = os.path.join(tmpdir, outstr)
+        random_content = random_contents[random_parts_indices[i]] # select part of randoms
+        np.savetxt(filename, np.concatenate((data_content, random_content))) # save data and random part to file
+        # run code, forward output to separate file
+        os.system(f"{command} -in {filename} -outstr {outstr} -balance >> {os.path.join(tmpdir, outstr)}.out")
+        os.remove(filename) # clean up
+        os.system(f"mv output/{outstr}_?pc*.txt {os.path.normpath(tmpdir)}/") # move output into the temporary dir
+        print_and_log(f"Done with (D[{j}]-R[{i}])^N")
+    # end for each random part
 # end for each data file
 
 # Now need to combine the files to get the full NPCF estimate
 # We do this in another python script, and perform edge-correction unless the periodic flag is not set
 if periodic:
-  print("Combining files together without performing edge-corrections (using analytic R^N counts)")
-  # The script doesn't exist yet
-  os.system(f"python python/combine_files_periodic_new.py {os.path.join(tmpdir, outroot)} {len(datafilenames)} {Nparts} | tee -a {errlog}")
+    print("Combining files together without performing edge-corrections (using analytic R^N counts)")
+    # The script doesn't exist yet
+    os.system(f"python python/combine_files_periodic_new.py {os.path.join(tmpdir, outroot)} {len(datafilenames)} {Nparts} | tee -a {errlog}")
 else:
-  print("Combining files together and performing edge-corrections")
-  # run script, print output to stdout AND append to errlog
-  os.system(f"python python/combine_files_new.py {os.path.join(tmpdir, outroot)} {len(datafilenames)} {Nparts} | tee -a {errlog}")
+    print("Combining files together and performing edge-corrections")
+    # run script, print output to stdout AND append to errlog
+    os.system(f"python python/combine_files_new.py {os.path.join(tmpdir, outroot)} {len(datafilenames)} {Nparts} | tee -a {errlog}")
 
 print_and_log(f"Finished with computation. Placing results into {outdir}/")
 print_log(datetime.now())
