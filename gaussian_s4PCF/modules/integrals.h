@@ -214,9 +214,10 @@ public:
         for(int i=0; i<N4; i++) {
             Float current_integral_in_bin = c4[i]/n_loops;
             Float next_integral_in_bin = (c4[i]+ints->c4[i])/(n_loops+1.);
+            if ((current_integral_in_bin == 0) && (next_integral_in_bin == 0)) continue; // treat 0-0 as zero relative difference, just in case
             reldiff_c4 += pow(current_integral_in_bin/next_integral_in_bin - 1., 2);
         }
-        reldiff_c4=sqrt(reldiff_c4);
+        reldiff_c4=sqrt(reldiff_c4/N4);
         // Return percent difference
         rmsrdC4=100.*reldiff_c4;
         }
