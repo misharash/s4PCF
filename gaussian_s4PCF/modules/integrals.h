@@ -206,19 +206,19 @@ public:
         }
     }
 
-    void frobenius_difference_sum(Integrals* ints, int n_loop, Float &frobC4){
+    void rms_rel_difference(Integrals* ints, int n_loop, Float &rmsrdC4){
         // Add the values accumulated in ints to the corresponding internal sums and compute the Frobenius norm difference between integrals
         Float n_loops = (Float)n_loop;
-        Float self_c4=0, diff_c4=0;
+        Float reldiff_c4 = 0;
         // Compute Frobenius norms and sum integrals
         for(int i=0; i<N4; i++) {
-            self_c4+=pow(c4[i]/n_loops,2.);
-            diff_c4+=pow(c4[i]/n_loops-(c4[i]+ints->c4[i])/(n_loops+1.),2.);
+            Float current_integral_in_bin = c4[i]/n_loops;
+            Float next_integral_in_bin = (c4[i]+ints->c4[i])/(n_loops+1.);
+            reldiff_c4 += pow(current_integral_in_bin/next_integral_in_bin - 1., 2);
         }
-        diff_c4=sqrt(diff_c4);
-        self_c4=sqrt(self_c4);
+        reldiff_c4=sqrt(reldiff_c4);
         // Return percent difference
-        frobC4=100.*(diff_c4/self_c4);
+        rmsrdC4=100.*reldiff_c4;
         }
 
     void sum_total_counts(uint64& acc4){

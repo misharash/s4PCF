@@ -310,12 +310,12 @@ class compute_integral{
                     fprintf(stderr,"\nFinished integral loop %d of %d after %d s. Estimated time left:  %2.2d:%2.2d:%2.2d hms, i.e. %d s.\n",n_loops+1,par->max_loops, current_runtime,remaining_time/3600,remaining_time/60%60, remaining_time%60,remaining_time);
 
                     TotalTime.Start(); // Restart the timer
-                    Float frob_C4;
+                    Float rmsrd_C4;
 
-                    sumint.frobenius_difference_sum(&locint,n_loops, frob_C4);
-                    if(frob_C4<0.01) convergence_counter++;
+                    sumint.rms_rel_difference(&locint,n_loops, rmsrd_C4);
+                    if(rmsrd_C4<0.01) convergence_counter++;
                     if (n_loops!=0){
-                        fprintf(stderr,"Frobenius percent difference after loop %d is %.3f\n",n_loops, frob_C4);
+                        fprintf(stderr,"RMS relative difference after loop %d is %.3f%%\n",n_loops, rmsrd_C4);
                     }
                 }
 
