@@ -21,6 +21,12 @@ class NPCF {
     // Array to hold the 4PCF
     Float fourpcf[N4PCF];
 
+    int N4PCF_used = 0; // number of 4PCF actually in use, can't be larger than N4PCF, will be incremented later
+
+    int fourpcf_bins[3][N4PCF]; // 4PCF index to 3 bin numbers mapping
+
+    int fourpcf_bin_number[NBIN_LONG][NBIN][NBIN]; // 3 bin numbers to 4PCF index mapping, uses -1 when bin is illegal
+
     void reset() {
         // Zero out the array on construction.
 
@@ -32,6 +38,32 @@ class NPCF {
             fourpcf[x] = 0.0;
 
         return;
+    }
+
+    void calc_4pcf_indices(Float rmin, Float rmax, Float rmin_long, Float rmax_long) {
+        // Set up index mapping
+        // Check the triangle condition if needed
+        double eps = 1e-6; // some small tolerance for checking the condition
+        for (int i = 0; i < NBIN_LONG; i++) {
+            Float ri_min = rmin_long + i*(rmax_long-rmin_long)/NBIN_LONG; // minimal long radius in i'th bin
+            for (int j = 0; j < NBIN; j++) {
+                Float rj_max = rmin + (j+1)*(rmax-rmin)/NBIN; // maximal radius in j'th bin
+                for (int k = j; k < NBIN; k++) { // enough to do k>=j
+                    Float rk_max = rmin + (k+1)*(rmax-rmin)/NBIN; // maximal radius in k'th bin
+                    if (PREVENT_TRIANGLES && (rj_max + rk_max > ri_min + eps)) { // triangle is possible and we prevent it
+                        fourpcf_bin_number[i][j][k] = fourpcf_bin_number[i][k][j] = -1; // bin is illegal, set that symmetrically
+                    }
+                    else {
+                        fourpcf_bin_number[i][j][k] = fourpcf_bin_number[i][k][j] = N4PCF_used; // set bin number symmetrically by last two numbers
+                        fourpcf_bins[0][N4PCF_used] = i;
+                        fourpcf_bins[1][N4PCF_used] = j;
+                        fourpcf_bins[2][N4PCF_used] = k;
+                        N4PCF_used++; // increment number of used bins
+                    }
+                }
+            }
+        }
+        assert(N4PCF_used <= N4PCF);
     }
 
     NPCF() {
@@ -136,31 +168,16 @@ class NPCF {
                     "Row 3 = radial bin 3, Row 4 = zeta_l1l2l3^abc\n");
 
             // First print the indices of the radial bins
-            for (int i = 0; i < NBIN_LONG; i++) {
-                for (int j = 0; j < NBIN; j++) {
-                    for (int k = j; k < NBIN; k++) {
-                        fprintf(OutFile2, "%2d\t", i);
-                    }
-                }
-            }
+            for (int i = 0; i < N4PCF; i++)
+                fprintf(OutFile2, "%2d\t", fourpcf_bins[0][i]);
             fprintf(OutFile2, "\n");
 
-            for (int i = 0; i < NBIN_LONG; i++) {
-                for (int j = 0; j < NBIN; j++) {
-                    for (int k = j; k < NBIN; k++) {
-                        fprintf(OutFile2, "%2d\t", j);
-                    }
-                }
-            }
+            for (int i = 0; i < N4PCF; i++)
+                fprintf(OutFile2, "%2d\t", fourpcf_bins[1][i]);
             fprintf(OutFile2, "\n");
 
-            for (int i = 0; i < NBIN_LONG; i++) {
-                for (int j = 0; j < NBIN; j++) {
-                    for (int k = j; k < NBIN; k++) {
-                        fprintf(OutFile2, "%2d\t", k);
-                    }
-                }
-            }
+            for (int i = 0; i < N4PCF; i++)
+                fprintf(OutFile2, "%2d\t", fourpcf_bins[2][i]);
             fprintf(OutFile2, "\n");
 
             // Now print the 4PCF.
@@ -212,15 +229,14 @@ class NPCF {
         return;
     }
 
+#if (!PREVENT_TRIANGLES)
     inline void excl_4pcf_triangle(int bin_long, int bin, int bin2, Float wprod) {
         // COMPUTE 4PCF CONTRIBUTIONS
 
         ExclTimer4_triangle.Start();
 
-        if (bin <= bin2) {
-            int index = getbin_pair(bin, bin2);
-            fourpcf[bin_long * N3PCF + index] -= wprod;
-        }
+        if (bin <= bin2)
+            fourpcf[fourpcf_bin_number[bin_long][bin][bin2]] -= wprod;
 
         ExclTimer4_triangle.Stop();
 
@@ -233,14 +249,10 @@ class NPCF {
         ExclTimer4_doubleside.Start();
 
         // Iterate over second bin
-        for (int bin2 = 0; bin2 <= bin; bin2++) {
-            int index = getbin_pair(bin2, bin); // bin2 <= bin
-            fourpcf[bin_long * N3PCF + index] -= pair->xi0[bin2] * wprod;
-        }
-        for (int bin2 = bin; bin2 < NBIN; bin2++) { // go over bin=bin2 second time for consistency
-            int index = getbin_pair(bin, bin2); // bin <= bin2
-            fourpcf[bin_long * N3PCF + index] -= pair->xi0[bin2] * wprod;
-        }
+        for (int bin2 = 0; bin2 <= bin; bin2++)
+            fourpcf[fourpcf_bin_number[bin_long][bin][bin2]] -= pair->xi0[bin2] * wprod;
+        for (int bin2 = bin; bin2 < NBIN; bin2++) // go over bin=bin2 second time for consistency
+            fourpcf[fourpcf_bin_number[bin_long][bin][bin2]] -= pair->xi0[bin2] * wprod;
         // End of radial binning loops
         ExclTimer4_doubleside.Stop();
 
@@ -252,13 +264,13 @@ class NPCF {
 
         ExclTimer4_tripleside.Start();
 
-        int index = getbin_pair(bin, bin);
-        fourpcf[bin_long * N3PCF + index] += wprod * wprod;
+        fourpcf[fourpcf_bin_number[bin_long][bin][bin]] += wprod * wprod;
         
         ExclTimer4_tripleside.Stop();
 
         return;
     }
+#endif
 
     inline void add_4pcf(Pairs* pair1, Pairs* pair2, int bin_long) {
         // COMPUTE 4PCF CONTRIBUTIONS
@@ -266,12 +278,12 @@ class NPCF {
         AddTimer4.Start();
 
         // Iterate over second bin
-        for (int j = 0, bin_index = 0; j < NBIN; j++) {
+        for (int j = 0; j < NBIN; j++) {
             // Iterate over final bin and advance the 4PCF array counter
             for (int k = j; k < NBIN; k++) {
-                fourpcf[bin_long * N3PCF + bin_index++] +=
-                    pair1->xi0[j] * pair2->xi0[k] +
-                    pair1->xi0[k] * pair2->xi0[j];
+                int bin_number = fourpcf_bin_number[bin_long][j][k];
+                if (bin_number < 0) continue; // skip illegal bin
+                fourpcf[bin_number] += pair1->xi0[j] * pair2->xi0[k] + pair1->xi0[k] * pair2->xi0[j];
             }
         }
         // End of radial binning loops

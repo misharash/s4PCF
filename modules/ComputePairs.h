@@ -141,6 +141,7 @@ void compute_pairs(Grid* grid,
                                 npcf[thread].excl_3pcf(bin, grid->p[k].w * grid->p[k].w * primary_w);
 
                                 // Exclude triangular self-counts from 4PCF
+                                #if (!PREVENT_TRIANGLES)
                                 if (rmin_long < 2*rmax) {
                                     integer3 delta2;
                                     for (delta2.x = -maxsep; delta2.x <= maxsep; delta2.x++)
@@ -188,8 +189,10 @@ void compute_pairs(Grid* grid,
                                     // done with delta.y loop
                                     // done with delta.x loop
                                 }
+                                #endif
 
                                 // Exclude triple-side self-counts from 4PCF
+                                #if (!PREVENT_TRIANGLES)
                                 if (rmin_long < rmax) {
                                     if (norm2 >= rmax_long2 || norm2 <= rmin_long2)
                                         continue;
@@ -197,6 +200,7 @@ void compute_pairs(Grid* grid,
                                                     NBIN_LONG);
                                     npcf[thread].excl_4pcf_tripleside(bin_long, bin, grid->p[k].w * primary_w);
                                 }
+                                #endif
                             }  // Done with this secondary particle
                         }      // Done with this delta.z loop
                 // done with delta.y loop
@@ -207,6 +211,7 @@ void compute_pairs(Grid* grid,
                 }
 
                 // Now exclude 4pcf double-side self-counts
+                #if (!PREVENT_TRIANGLES)
                 if (rmin_long < rmax) {
                     for (delta.x = -maxsep; delta.x <= maxsep; delta.x++)
                         for (delta.y = -maxsep; delta.y <= maxsep; delta.y++)
@@ -270,6 +275,7 @@ void compute_pairs(Grid* grid,
                     // done with delta.y loop
                     // done with delta.x loop
                 }
+                #endif
 
                 // Now combine pair counts into 3pcf counts
                 npcf[thread].add_3pcf(pairs_i + j, primary_w);

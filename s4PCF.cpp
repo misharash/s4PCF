@@ -25,6 +25,11 @@
 #define NBIN 30
 #define NBIN_LONG 30
 
+// Whether to exclude bins that can allow triangles (k=l), r_ij<=r_ik+r_jl
+// Beneficial for performance - avoids triple loop
+// Also guarantees no other 4PCF self-counts are involved
+#define PREVENT_TRIANGLES 1
+
 // MAXTHREAD is the maximum number of allowed threads.
 // Big trouble if actual number exceeds this!
 // No problem if actual number is smaller.
@@ -191,9 +196,11 @@ typedef struct Xdiff {
 
 NPCF npcf[MAXTHREAD];
 
-void zero_power() {
-    for (int t = 0; t < MAXTHREAD; t++)
+void set_npcf(Float rmin, Float rmax, Float rmin_long, Float rmax_long) {
+    for (int t = 0; t < MAXTHREAD; t++) {
         npcf[t].reset();
+        npcf[t].calc_4pcf_indices(rmin, rmax, rmin_long, rmax_long);
+    }
 }
 
 void sum_power() {
@@ -476,7 +483,7 @@ int main(int argc, char* argv[]) {
     GridTime.Stop();
     IOTime.Stop();
 
-    zero_power();
+    set_npcf(rmin, rmax, rmin_long, rmax_long);
     fflush(NULL);
 
     Prologue.Stop();
