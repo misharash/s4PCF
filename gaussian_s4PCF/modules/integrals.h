@@ -14,6 +14,10 @@ private:
     Float *r_high, *r_low, *r_high_long, *r_low_long; // Max and min of each radial bin
     int nbin, nbin_long, mbin;
     int Nbin, Nbinpairs, N4;
+    bool prevent_triangles;
+    int N4_used = 0; // number of 4PCF actually in use, can't be larger than N4PCF, will be incremented later
+    int* fourpcf_bins[3]; // 4PCF index to 3 bin numbers mapping
+    int* fourpcf_bin_number; // 3 bin numbers to 4PCF index mapping, uses -1 when bin is illegal
     Float *c4; // Array to accumulate integral
     Float *norm4; // Array to store normalizations for integral
     JK_weights *JK12, *JK23, *JK34; // RR counts and jackknife weights
@@ -53,6 +57,10 @@ public:
         ec+=posix_memalign((void **) &c4, PAGE, sizeof(double)*N4);
         ec+=posix_memalign((void **) &norm4, PAGE, sizeof(double)*N4);
         ec+=posix_memalign((void **) &binct4, PAGE, sizeof(uint64)*N4);
+        ec+=posix_memalign((void **) &fourpcf_bin_number, PAGE, sizeof(int)*N4);
+        ec+=posix_memalign((void **) &fourpcf_bins[0], PAGE, sizeof(int)*3*N4);
+        fourpcf_bins[1] = &fourpcf_bins[0][N4];
+        fourpcf_bins[2] = &fourpcf_bins[1][N4];
 
         assert(ec==0);
         reset();
@@ -77,12 +85,18 @@ public:
         dmu=(mumax-mumin)/mbin;
 
         rad=mbin==1&&dmu==1.;
+
+        prevent_triangles = par->prevent_triangles;
+        
+        calc_4pcf_indices();
     }
 
     ~Integrals() {
         free(c4);
         free(norm4);
         free(binct4);
+        free(fourpcf_bin_number);
+        free(fourpcf_bins[0]);
     }
 
     void reset(){
@@ -91,6 +105,29 @@ public:
             norm4[j] = 0;
             binct4[j] = 0;
         }
+    }
+
+    void calc_4pcf_indices() {
+        // Set up index mapping
+        // Check the triangle condition if needed
+        double eps = 1e-6; // some small tolerance for checking the condition
+        for (int i = 0; i < nbin_long; i++) {
+            for (int j = 0; j < Nbin; j++) {
+                for (int k = j; k < Nbin; k++) { // enough to do k>=j
+                    if (prevent_triangles && (r_high[j] + r_high[k] > r_low_long[i] + eps)) { // triangle is possible and we prevent it
+                        fourpcf_bin_number[getbin_triple(i, j, k)] = -1; // bin is illegal
+                    }
+                    else {
+                        fourpcf_bin_number[getbin_triple(i, j, k)] = N4_used; // set bin number
+                        fourpcf_bins[0][N4_used] = i;
+                        fourpcf_bins[1][N4_used] = j;
+                        fourpcf_bins[2][N4_used] = k;
+                        N4_used++; // increment number of used bins
+                    }
+                }
+            }
+        }
+        assert(N4_used <= N4);
     }
 
     inline int getbin(Float r, Float mu){
@@ -116,6 +153,10 @@ public:
             j = bin1;
         }
         return j + Nbin*i - i * (i+1) / 2;
+    }
+
+    inline int getbin_triple(int bin_long, int bin1, int bin2){
+        return bin_long * Nbinpairs + getbin_pair(bin1, bin2);
     }
 
     inline int getbin_long(Float r, Float mu){
@@ -166,7 +207,8 @@ public:
             Float xi_ik = cf13->xi(rik_mag, rik_mu);
             cleanup_l(pi.pos, pl.pos, ril_mag, ril_mu);
             Float xi_il = cf12->xi(ril_mag, ril_mu); // should be cf14 in general, but that does not exist yet
-            tmp_full_bin = bin_ij*Nbinpairs + getbin_pair(bin_ik, bin_jl);
+            tmp_full_bin = fourpcf_bin_number[getbin_triple(bin_ij, bin_ik, bin_jl)];
+            if (tmp_full_bin < 0) continue; // skip illegal bins
 
             // Now compute the integral;
             c4v = tmp_weight/prob*(xi_ik*xi_jl + xi_ij*xi_kl + xi_il*xi_jk); // gaussian 4PCF
@@ -199,7 +241,7 @@ public:
 public:
     void sum_ints(Integrals* ints) {
         // Add the values accumulated in ints to the corresponding internal sums
-        for(int i=0; i<N4; i++) {
+        for(int i=0; i<N4_used; i++) {
             c4[i]+=ints->c4[i];
             norm4[i]+=ints->norm4[i];
             binct4[i]+=ints->binct4[i];
@@ -211,27 +253,27 @@ public:
         Float n_loops = (Float)n_loop;
         Float reldiff_c4 = 0;
         // Compute Frobenius norms and sum integrals
-        for(int i=0; i<N4; i++) {
+        for(int i=0; i<N4_used; i++) {
             Float current_integral_in_bin = c4[i]/n_loops;
             Float next_integral_in_bin = (c4[i]+ints->c4[i])/(n_loops+1.);
             if ((current_integral_in_bin == 0) && (next_integral_in_bin == 0)) continue; // treat 0-0 as zero relative difference, just in case
             reldiff_c4 += pow(current_integral_in_bin/next_integral_in_bin - 1., 2);
         }
-        reldiff_c4=sqrt(reldiff_c4/N4);
+        reldiff_c4=sqrt(reldiff_c4/N4_used);
         // Return percent difference
         rmsrdC4=100.*reldiff_c4;
         }
 
     void sum_total_counts(uint64& acc4){
         // Add local counts to total bin counts in acc4
-        for(int i=0; i<N4; i++) {
+        for(int i=0; i<N4_used; i++) {
             acc4+=binct4[i];
         }
     }
 
     void normalize(){
         // Normalize the accumulated integrals
-        for(int i=0; i<N4; i++) {
+        for(int i=0; i<N4_used; i++) {
             c4[i]/=norm4[i];
         }
     }
@@ -260,34 +302,22 @@ public:
         FILE * C4File = fopen(c4name,"w"); // for c4 part of integral
 
         // First print the indices of the bins
-        for (int i = 0; i < nbin_long; i++) {
-            for (int j = 0; j < Nbin; j++) {
-                for (int k = j; k < Nbin; k++) {
-                    fprintf(C4File, "%2d\t", i);
-                }
-            }
+        for(int i=0; i<N4_used; i++) {
+            fprintf(C4File, "%2d\t", fourpcf_bins[0][i]);
         }
         fprintf(C4File, "\n");
 
-        for (int i = 0; i < nbin_long; i++) {
-            for (int j = 0; j < Nbin; j++) {
-                for (int k = j; k < Nbin; k++) {
-                    fprintf(C4File, "%2d\t", j);
-                }
-            }
+        for(int i=0; i<N4_used; i++) {
+            fprintf(C4File, "%2d\t", fourpcf_bins[1][i]);
         }
         fprintf(C4File, "\n");
 
-        for (int i = 0; i < nbin_long; i++) {
-            for (int j = 0; j < Nbin; j++) {
-                for (int k = j; k < Nbin; k++) {
-                    fprintf(C4File, "%2d\t", k);
-                }
-            }
+        for(int i=0; i<N4_used; i++) {
+            fprintf(C4File, "%2d\t", fourpcf_bins[2][i]);
         }
         fprintf(C4File, "\n");
 
-        for(int i=0; i<N4; i++) {
+        for(int i=0; i<N4_used; i++) {
             fprintf(C4File,"%le\t",c4[i]);
         }
         fprintf(C4File,"\n");
@@ -302,7 +332,23 @@ public:
             snprintf(normname,sizeof normname, "%s/norm4_nlong%d_n%d_m%d_%d%d,%d%d_%s.txt",out_file, nbin_long,nbin,mbin,I1,I2,I3,I4,suffix);
             FILE * NormFile = fopen(normname,"w");
 
-            for(int i=0; i<N4; i++) {
+            // First print the indices of the bins
+            for(int i=0; i<N4_used; i++) {
+                fprintf(NormFile, "%2d\t", fourpcf_bins[0][i]);
+            }
+            fprintf(NormFile, "\n");
+
+            for(int i=0; i<N4_used; i++) {
+                fprintf(NormFile, "%2d\t", fourpcf_bins[1][i]);
+            }
+            fprintf(NormFile, "\n");
+
+            for(int i=0; i<N4_used; i++) {
+                fprintf(NormFile, "%2d\t", fourpcf_bins[2][i]);
+            }
+            fprintf(NormFile, "\n");
+
+            for(int i=0; i<N4_used; i++) {
                 fprintf(NormFile,"%le\t",norm4[i]);
             }
             fprintf(NormFile,"\n");
@@ -317,34 +363,22 @@ public:
             FILE * BinFile = fopen(binname,"w");
 
             // First print the indices of the bins
-            for (int i = 0; i < nbin_long; i++) {
-                for (int j = 0; j < Nbin; j++) {
-                    for (int k = j; k < Nbin; k++) {
-                        fprintf(BinFile, "%2d\t", i);
-                    }
-                }
+            for(int i=0; i<N4_used; i++) {
+                fprintf(BinFile, "%2d\t", fourpcf_bins[0][i]);
             }
             fprintf(BinFile, "\n");
 
-            for (int i = 0; i < nbin_long; i++) {
-                for (int j = 0; j < Nbin; j++) {
-                    for (int k = j; k < Nbin; k++) {
-                        fprintf(BinFile, "%2d\t", j);
-                    }
-                }
+            for(int i=0; i<N4_used; i++) {
+                fprintf(BinFile, "%2d\t", fourpcf_bins[1][i]);
             }
             fprintf(BinFile, "\n");
 
-            for (int i = 0; i < nbin_long; i++) {
-                for (int j = 0; j < Nbin; j++) {
-                    for (int k = j; k < Nbin; k++) {
-                        fprintf(BinFile, "%2d\t", k);
-                    }
-                }
+            for(int i=0; i<N4_used; i++) {
+                fprintf(BinFile, "%2d\t", fourpcf_bins[2][i]);
             }
             fprintf(BinFile, "\n");
 
-            for(int i=0; i<N4; i++) {
+            for(int i=0; i<N4_used; i++) {
                 fprintf(BinFile,"%llu\t",binct4[i]);
             }
             fprintf(BinFile,"\n");

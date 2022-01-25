@@ -97,6 +97,10 @@ public:
 
     //-------- OTHER PARAMETERS ----------------------------------------------
 
+    // Whether to exclude bins that can allow triangles (k=l), r_ij<=r_ik+r_jl
+    // For consistency with s4PCF
+    bool prevent_triangles = true;
+
 	// The minimum mu of the smallest bin.
 	Float mumin = 0.0;
 
