@@ -56,10 +56,6 @@ public:
 	// The number of mu bins
 	int mbin = 1;
 
-     // Name of the RR bin file
-    char *RR_bin_file = NULL; // RR_{aA}^{11} file
-    const char default_RR_bin_file[500] = "weights/RR_counts_n15_m1_11.txt";
-
     //---------- PRECISION PARAMETERS ---------------------------------------
 
     // Maximum number of iterations to compute the C_ab integrals over
@@ -85,15 +81,6 @@ public:
 
     // Number of galaxies in second dataset
     Float nofznorm2=3398430; //
-
-    //---------- (r,mu) MULTI-FIELD PARAMETERS ------------------------------
-
-    // Summed pair count files
-    char *RR_bin_file12 = NULL; // RR_{aA}^{12} file
-    const char default_RR_bin_file12[500] = "";
-
-    char *RR_bin_file2 = NULL; // RR_{aA}^{22} file
-    const char default_RR_bin_file2[500] = "";
 
     //-------- OTHER PARAMETERS ----------------------------------------------
 
@@ -198,9 +185,6 @@ public:
         else if (!strcmp(argv[i],"-N4")) N4=atof(argv[++i]);
 
 		else if (!strcmp(argv[i],"-mbin")) mbin = atoi(argv[++i]);
-        else if (!strcmp(argv[i],"-RRbin")) RR_bin_file=argv[++i];
-		else if (!strcmp(argv[i],"-RRbin12")) RR_bin_file12=argv[++i];
-		else if (!strcmp(argv[i],"-RRbin2")) RR_bin_file2=argv[++i];
 
         else if (!strcmp(argv[i],"-perbox")) perbox = 1;
         else if (!strcmp(argv[i],"-np")) {
@@ -238,10 +222,6 @@ public:
 
 	    assert(mumax<=1); // mu > 1 makes no sense
 
-	    if (RR_bin_file==NULL) RR_bin_file = (char *) default_RR_bin_file; // no binning file was given
-	    if (RR_bin_file12==NULL) RR_bin_file12 = (char *) default_RR_bin_file12; // no binning file was given
-	    if (RR_bin_file2==NULL) RR_bin_file2 = (char *) default_RR_bin_file2; // no binning file was given
-
         if (rescale<=0.0) rescale = box_max;   // This would allow a unit cube to fill the periodic volume
 	    if (corname==NULL) { corname = (char *) default_corname; }// No name was given
 	    if (out_file==NULL) out_file = (char *) default_out_file; // no output savefile
@@ -256,11 +236,7 @@ public:
 
 	    // Decide if we are using multiple tracers:
 	    if (strlen(fname2)!=0){
-            if ((strlen(RR_bin_file12)==0)||(strlen(RR_bin_file2)==0)){
-                printf("Two random particle sets input but not enough RR pair count files! Exiting.");
-                exit(1);
-            }
-            else if ((strlen(corname2)==0)||(strlen(corname12)==0)){
+            if ((strlen(corname2)==0)||(strlen(corname12)==0)){
                 printf("Two random particle sets input but not enough correlation function files! Exiting.");
                 exit(1);
             }
@@ -278,8 +254,6 @@ public:
             printf("\nUsing a single set of tracer particles\n");
             multi_tracers=false;
             // set variables for later use
-            RR_bin_file12=RR_bin_file;
-            RR_bin_file2=RR_bin_file;
             nofznorm2=nofznorm;
             corname12=corname;
             corname2=corname;
@@ -350,7 +324,6 @@ private:
 	    fprintf(stderr, "   -binfile_cf <filename>: File containing the desired radial bins for the correlation function.\n");
         fprintf(stderr, "   -norm <nofznorm>: Number of galaxies in the first tracer set.\n");
 
-        fprintf(stderr, "   -RRbin <filename>: File containing the {1,1} jackknife RR bin counts (computed from Corrfunc)\n");
         fprintf(stderr, "   -mbin <mbin>:  The number of mu bins (spaced linearly).\n");
 
 	    fprintf(stderr, "   -mbin_cf <mbin_cf>:  The number of mu bins in the correlation function (spaced linearly).\n");
@@ -366,9 +339,6 @@ private:
 	    fprintf(stderr, "   -cor12 <file>: (Optional) File location of input xi_{12} cross-correlation function file.\n");
 	    fprintf(stderr, "   -cor2 <file>: (Optional) File location of input xi_2 correlation function file.\n");
 	    fprintf(stderr, "   -norm2 <nofznorm2>: (Optional) Number of galaxies in the survey for the second tracer set.\n");
-
-        fprintf(stderr, "   -RRbin12 <filename>: (Optional) File containing the {1,2} jackknife RR bin counts (computed from Corrfunc)\n");
-	    fprintf(stderr, "   -RRbin2 <filename>: (Optional) File containing the {2,2} jackknife RR bin counts (computed from Corrfunc)\n");
         fprintf(stderr, "\n");
 
         fprintf(stderr, "   -maxloops <max_loops>: Maximum number of integral loops\n");
