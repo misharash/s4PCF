@@ -36,7 +36,7 @@ randomfilename = "qpm_randoms_50x.xyzwj" # random filename
 outroot = "qpm_galaxies" # base name for outputs
 workdir = os.getcwd()
 indir = os.path.join(workdir, "gaussian_s4PCF") # input directory (see above for required contents)
-outdir = os.path.join(workdir, "out1") # output file directory
+outdir = os.path.join(workdir, "out1_newbins") # output file directory
 tmpdir = os.path.join(workdir, "tmp") # temporary directory for intermediate file storage for this run (ideally somewhere with fast I/O)
 scriptname = "run_npcf.py"
 

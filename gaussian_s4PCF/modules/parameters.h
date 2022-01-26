@@ -36,7 +36,7 @@ public:
 
     // Output directory
     char *out_file = NULL;
-    const char default_out_file[500] = "./out_xi_x50_n900_m10";
+    const char default_out_file[500] = "./out_xi_x50_newbins";
 
     // The number of mu bins in the correlation function
     int mbin_cf = 10;
