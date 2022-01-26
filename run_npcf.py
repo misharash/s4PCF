@@ -45,7 +45,7 @@ do_full = 1 # whether do full computation or only combine existing intermediate 
 ##########################################################
 
 # Set OpenMP number of threads
-OMP_NUM_THREADS = 30
+OMP_NUM_THREADS = 20
 os.environ["OMP_NUM_THREADS"] = str(OMP_NUM_THREADS)
 
 # Define command to run the C++ code
