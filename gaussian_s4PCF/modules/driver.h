@@ -1,6 +1,5 @@
 // driver.h - this contains various c++ functions to create particles in random positions / read them in from file. Based on code by Alex Wiegand.
 #include "cell_utilities.h"
-#include "jackknife_weights.h"
 
 #ifndef DRIVER_H
 #define DRIVER_H

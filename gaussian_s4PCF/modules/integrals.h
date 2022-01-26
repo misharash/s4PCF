@@ -2,7 +2,6 @@
 #include "parameters.h"
 #include "correlation_function.h"
 #include "cell_utilities.h"
-#include "jackknife_weights.h"
 
 #ifndef INTEGRALS_H
 #define INTEGRALS_H
@@ -20,7 +19,6 @@ private:
     int* fourpcf_bin_number; // 3 bin numbers to 4PCF index mapping, uses -1 when bin is illegal
     Float *c4; // Array to accumulate integral
     Float *norm4; // Array to store normalizations for integral
-    JK_weights *JK12, *JK23, *JK34; // RR counts and jackknife weights
     char* out_file;
     bool box,rad=0; // Flags to decide whether we have a periodic box + if we have a radial correlation function only
     int I1, I2, I3, I4; // indices for which fields to use for each particle
@@ -30,13 +28,10 @@ private:
 public:
     Integrals(){};
 
-    Integrals(Parameters *par, CorrelationFunction *_cf12, CorrelationFunction *_cf13, CorrelationFunction *_cf24, JK_weights *_JK12, JK_weights *_JK23, JK_weights *_JK34, int _I1, int _I2, int _I3, int _I4){
+    Integrals(Parameters *par, CorrelationFunction *_cf12, CorrelationFunction *_cf13, CorrelationFunction *_cf24, int _I1, int _I2, int _I3, int _I4){
         cf12 = new CorrelationFunction(_cf12);
         cf13 = new CorrelationFunction(_cf13);
         cf24 = new CorrelationFunction(_cf24);
-        JK12 = _JK12;
-        JK23 = _JK23;
-        JK34 = _JK34;
         I1=_I1;
         I2=_I2;
         I3=_I3;

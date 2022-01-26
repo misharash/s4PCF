@@ -101,17 +101,10 @@ class compute_integral{
             else return &all_grid[1];
         }
 
-        JK_weights* which_JK(JK_weights all_JK[], int Ia, int Ib){
-            // Returns the relevant correlation function for two input field indices
-            if((Ia==1)&(Ib==1)) return &all_JK[0];
-            else if ((Ia==2)&&(Ib==2)) return &all_JK[1];
-            else return &all_JK[2];
-        }
-
     public:
         compute_integral(){};
 
-        compute_integral(Grid all_grid[], Parameters *par, JK_weights all_JK[], CorrelationFunction all_cf[], RandomDraws all_rd[], int I1, int I2, int I3, int I4, int iter_no){
+        compute_integral(Grid all_grid[], Parameters *par, CorrelationFunction all_cf[], RandomDraws all_rd[], int I1, int I2, int I3, int I4, int iter_no){
             // MAIN FUNCTION TO COMPUTE INTEGRALS
 
             int tot_iter=1; // total number of iterations
@@ -132,11 +125,6 @@ class compute_integral{
             RandomDraws *rd13 = which_rd(all_rd,I1,I3);
             RandomDraws *rd24 = which_rd(all_rd,I2,I4);
 
-            // Define relevant jackknife JK_weights
-            JK_weights *JK12 = which_JK(all_JK,I1,I2);
-            JK_weights *JK23 = which_JK(all_JK,I2,I3);
-            JK_weights *JK34 = which_JK(all_JK,I3,I4);
-
             nbin = par->nbin; // number of radial bins
             mbin = par->mbin; // number of mu bins
 
@@ -152,7 +140,7 @@ class compute_integral{
 
             gsl_rng_env_setup(); // initialize gsl rng
 
-            Integrals sumint(par, cf12, cf13, cf24, JK12, JK23, JK34, I1, I2, I3, I4); // total integral
+            Integrals sumint(par, cf12, cf13, cf24, I1, I2, I3, I4); // total integral
 
             uint64 tot_quads=0; // global number of particle pairs/triples/quads used (including those rejected for being in the wrong bins)
             uint64 cell_attempt4=0; // number of j,k,l cells attempted
@@ -171,7 +159,7 @@ class compute_integral{
 
 #ifdef OPENMP
 
-    #pragma omp parallel firstprivate(steps,par,printtime,grid1,grid2,grid3,grid4,cf12,cf13,cf24) shared(sumint,TotalTime,gsl_rng_default,rd13,rd24,JK12,JK23,JK34) reduction(+:convergence_counter,cell_attempt4,used_cell4,tot_quads)
+    #pragma omp parallel firstprivate(steps,par,printtime,grid1,grid2,grid3,grid4,cf12,cf13,cf24) shared(sumint,TotalTime,gsl_rng_default,rd13,rd24) reduction(+:convergence_counter,cell_attempt4,used_cell4,tot_quads)
             { // start parallel loop
             // Decide which thread we are in
             int thread = omp_get_thread_num();
@@ -200,7 +188,7 @@ class compute_integral{
             integer3 delta2, delta3, delta4, prim_id, sec_id, thi_id;
             Float3 cell_sep2,cell_sep3;
 
-            Integrals locint(par, cf12, cf13, cf24, JK12, JK23, JK34, I1, I2, I3, I4); // Accumulates the integral contribution of each thread
+            Integrals locint(par, cf12, cf13, cf24, I1, I2, I3, I4); // Accumulates the integral contribution of each thread
 
             gsl_rng* locrng = gsl_rng_alloc(gsl_rng_default); // one rng per thread
             gsl_rng_set(locrng, steps*(thread+1));

@@ -45,7 +45,6 @@ typedef double3 Float3;
 #include "modules/cell_utilities.h"
 #include "modules/grid.h"
 #include "modules/correlation_function.h"
-#include "modules/jackknife_weights.h"
 #include "modules/integrals.h"
 #include "modules/random_draws.h"
 #include "modules/driver.h"
@@ -72,18 +71,6 @@ int main(int argc, char *argv[]) {
     if(par.multi_tracers==true){
         max_no_functions=3;
         no_fields=2;
-    }
-
-    // Read in jackknife weights and RR pair counts (if JACKKNIFE is not defined just includes RR counts)
-    JK_weights all_weights[max_no_functions]; // create empty functions
-
-    JK_weights tmp(&par,1,1);
-    all_weights[0].copy(&tmp); // save into global memory
-
-    if(par.multi_tracers==true){
-        JK_weights tmp12(&par,1,2), tmp2(&par,2,2);
-        all_weights[1].copy(&tmp2);
-        all_weights[2].copy(&tmp12);
     }
 
     // Now read in particles to grid:
@@ -146,13 +133,6 @@ int main(int argc, char *argv[]) {
         fflush(NULL);
     }
 
-    // Now rescale weights based on number of particles (whether or not using jackknives)
-    all_weights[0].rescale(all_grid[0].norm,all_grid[0].norm);
-    if(par.multi_tracers==true){
-        all_weights[1].rescale(all_grid[1].norm,all_grid[1].norm);
-        all_weights[2].rescale(all_grid[0].norm,all_grid[1].norm);
-    }
-
     // Now define all possible correlation functions and random draws:
     CorrelationFunction all_cf[max_no_functions];
     RandomDraws all_rd[max_no_functions];
@@ -176,15 +156,15 @@ int main(int argc, char *argv[]) {
     rescale.refine_wrapper(&par, all_grid, all_cf, all_rd, max_no_functions);
 
     // Compute integrals
-    compute_integral(all_grid,&par,all_weights,all_cf,all_rd,1,1,1,1,1); // final digit is iteration number
+    compute_integral(all_grid,&par,all_cf,all_rd,1,1,1,1,1); // final digit is iteration number
 
     if(par.multi_tracers==true){
-        compute_integral(all_grid,&par,all_weights,all_cf,all_rd,1,2,1,1,2);
-        compute_integral(all_grid,&par,all_weights,all_cf,all_rd,1,2,2,1,3);
-        compute_integral(all_grid,&par,all_weights,all_cf,all_rd,1,2,1,2,4);
-        compute_integral(all_grid,&par,all_weights,all_cf,all_rd,1,1,2,2,5);
-        compute_integral(all_grid,&par,all_weights,all_cf,all_rd,2,1,2,2,6);
-        compute_integral(all_grid,&par,all_weights,all_cf,all_rd,2,2,2,2,7);
+        compute_integral(all_grid,&par,all_cf,all_rd,1,2,1,1,2);
+        compute_integral(all_grid,&par,all_cf,all_rd,1,2,2,1,3);
+        compute_integral(all_grid,&par,all_cf,all_rd,1,2,1,2,4);
+        compute_integral(all_grid,&par,all_cf,all_rd,1,1,2,2,5);
+        compute_integral(all_grid,&par,all_cf,all_rd,2,1,2,2,6);
+        compute_integral(all_grid,&par,all_cf,all_rd,2,2,2,2,7);
     }
 
     rusage ru;
