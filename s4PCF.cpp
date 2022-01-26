@@ -22,8 +22,8 @@
 // for the N-point function We output only NPCF with bin1 < bin2 < bin3 etc. to
 // avoid degeneracy and the bins including zero separations IF NBIN is changed
 // IT MUST ALSO BE UPDATED IN modules/gpufuncs.h!
-#define NBIN 30
-#define NBIN_LONG 30
+#define NBIN 15
+#define NBIN_LONG 18
 
 // Whether to exclude bins that can allow triangles (k=l), r_ij<=r_ik+r_jl
 // Beneficial for performance - avoids triple loop
@@ -239,7 +239,7 @@ void usage() {
             "bin.  Default 30.\n");
     fprintf(stderr,
             "   -rmin_long <rmin_long>: The minimum radius of the long "
-            "side bin.  Default 60.\n");
+            "side bin.  Default 30.\n");
     fprintf(stderr,
             "   -rmax_long <rmax_long>: The maximum radius of the long "
             "side bin.  Default 120.\n");
@@ -309,7 +309,7 @@ int main(int argc, char* argv[]) {
     // The minimum radius of the smallest bin.
     Float rmax_long = 120;
     // The maximum radius of the long side bin.
-    Float rmin_long = 60;
+    Float rmin_long = 30;
     // The minimum radius of the long side bin.
     int nside = 50;
     // The grid size, which should be tuned to match boxsize and rmax.
