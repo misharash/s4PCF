@@ -20,8 +20,8 @@ import numpy as np
 
 # Main inputs
 periodic = 0 # whether to run with periodic boundary conditions (should also be set in Makefile)
-rmin = 0 # minimum radius in Mpc/h
-rmax = 30 # maximum radius in Mpc/h
+rmin_short = 0 # minimum radius in Mpc/h
+rmax_short = 30 # maximum radius in Mpc/h
 rmin_long = 30 # minimum long side radius in Mpc/h
 rmax_long = 120 # maximum long side radius in Mpc/h
 
@@ -51,7 +51,7 @@ os.environ["OMP_NUM_THREADS"] = str(OMP_NUM_THREADS)
 # Define command to run the C++ code
 code = "./s4PCF"
 
-command = f"{code} -rmax {rmax} -rmin {rmin} -rmax_long {rmax_long} -rmin_long {rmin_long} -ngrid {ngrid} -scale {scale}"
+command = f"{code} -rmax_short {rmax_short} -rmin_short {rmin_short} -rmax_long {rmax_long} -rmin_long {rmin_long} -ngrid {ngrid} -scale {scale}"
 if periodic:
     command += f" -boxsize {boxsize}"
 

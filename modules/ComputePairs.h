@@ -4,19 +4,19 @@
 // ====================  Computing the pairs ==================
 
 void compute_pairs(Grid* grid,
-                   Float rmin,
-                   Float rmax,
+                   Float rmin_short,
+                   Float rmax_short,
                    Float rmin_long,
                    Float rmax_long,
                    int np) {
-    int maxsep =
-        ceil(rmax / grid->cellsize);  // Maximum distance we must search
+    int maxsep_short =
+        ceil(rmax_short / grid->cellsize);  // Maximum distance we must search
     int maxsep_long =
         ceil(rmax_long /
              grid->cellsize);  // Maximum distance we must search for long side
     int ne;
-    Float rmax2 = rmax * rmax;
-    Float rmin2 = rmin * rmin;  // rmax2*1e-12;    // Just an underflow guard
+    Float rmax_short2 = rmax_short * rmax_short;
+    Float rmin_short2 = rmin_short * rmin_short;  // rmax2*1e-12;    // Just an underflow guard
     Float rmax_long2 = rmax_long * rmax_long;
     Float rmin_long2 = rmin_long * rmin_long;
     uint64 cnt = 0, cnt2 = 0, cnt3 = 0;
@@ -79,9 +79,9 @@ void compute_pairs(Grid* grid,
                 integer3 delta;
                 if (thread == 0)
                     accpairs.Start();
-                for (delta.x = -maxsep; delta.x <= maxsep; delta.x++)
-                    for (delta.y = -maxsep; delta.y <= maxsep; delta.y++)
-                        for (delta.z = -maxsep; delta.z <= maxsep; delta.z++) {
+                for (delta.x = -maxsep_short; delta.x <= maxsep_short; delta.x++)
+                    for (delta.y = -maxsep_short; delta.y <= maxsep_short; delta.y++)
+                        for (delta.z = -maxsep_short; delta.z <= maxsep_short; delta.z++) {
                             const int samecell =
                                 (delta.x == 0 && delta.y == 0 && delta.z == 0)
                                     ? 1
@@ -115,7 +115,7 @@ void compute_pairs(Grid* grid,
                                 Float norm2 = dx.norm2();
                                 // Check if this is in the correct binning
                                 // ranges
-                                if (norm2 < rmax2 && norm2 > rmin2)
+                                if (norm2 < rmax_short2 && norm2 > rmin_short2)
                                     cnt++;
                                 else
                                     continue;
@@ -123,8 +123,7 @@ void compute_pairs(Grid* grid,
                                 // Now what do we want to do with the pair?
                                 norm2 = sqrt(norm2);  // Now just radius
                                 // Find the radial bin
-                                int bin = floor((norm2 - rmin) / (rmax - rmin) *
-                                                NBIN);
+                                int bin = floor((norm2 - rmin_short) / (rmax_short - rmin_short) * NBIN_SHORT);
 
                                 // Define x/r,y/r,z/r
                                 dx = dx / norm2;
@@ -142,11 +141,11 @@ void compute_pairs(Grid* grid,
 
                                 // Exclude triangular self-counts from 4PCF
                                 #if (!PREVENT_TRIANGLES)
-                                if (rmin_long < 2*rmax) {
+                                if (rmin_long < 2*rmax_short) {
                                     integer3 delta2;
-                                    for (delta2.x = -maxsep; delta2.x <= maxsep; delta2.x++)
-                                        for (delta2.y = -maxsep; delta2.y <= maxsep; delta2.y++)
-                                            for (delta.z = -maxsep; delta.z <= maxsep; delta2.z++) {
+                                    for (delta2.x = -maxsep_short; delta2.x <= maxsep_short; delta2.x++)
+                                        for (delta2.y = -maxsep_short; delta2.y <= maxsep_short; delta2.y++)
+                                            for (delta.z = -maxsep_short; delta.z <= maxsep_short; delta2.z++) {
                                                 // Check that the cell is in the grid!
                                                 int tmp_test = grid->test_cell(prim_id + delta2);
                                                 if (tmp_test < 0)
@@ -166,7 +165,7 @@ void compute_pairs(Grid* grid,
                                                     Float norm_l2 = dx_l.norm2();
                                                     // Check if this is in the correct binning
                                                     // ranges
-                                                    if (norm_2 < rmax2 && norm_2 > rmin2 && norm_l2 < rmax_long2 && norm_l2 > rmin_long2)
+                                                    if (norm_2 < rmax_short2 && norm_2 > rmin_short2 && norm_l2 < rmax_long2 && norm_l2 > rmin_long2)
                                                         cnt3++;
                                                     else
                                                         continue;
@@ -175,11 +174,9 @@ void compute_pairs(Grid* grid,
                                                     norm_2 = sqrt(norm_2);  // Now just radius
                                                     norm_l2 = sqrt(norm_l2);
                                                     // Find the radial bins
-                                                    int bin2 = floor((norm_2 - rmin) / (rmax - rmin) *
-                                                                    NBIN);
+                                                    int bin2 = floor((norm_2 - rmin_short) / (rmax_short - rmin_short) * NBIN_SHORT);
                                                     // if (bin2 < bin) continue; // count triples only in one order
-                                                    int bin_long = floor((norm_l2 - rmin_long) / (rmax_long - rmin_long) *
-                                                                    NBIN_LONG);
+                                                    int bin_long = floor((norm_l2 - rmin_long) / (rmax_long - rmin_long) * NBIN_LONG);
 
                                                     // Exclude self-counts from 4PCF
                                                     npcf[thread].excl_4pcf_triangle(bin_long, bin, bin2,
@@ -193,11 +190,10 @@ void compute_pairs(Grid* grid,
 
                                 // Exclude triple-side self-counts from 4PCF
                                 #if (!PREVENT_TRIANGLES)
-                                if (rmin_long < rmax) {
+                                if (rmin_long < rmax_short) {
                                     if (norm2 >= rmax_long2 || norm2 <= rmin_long2)
                                         continue;
-                                    int bin_long = floor((norm2 - rmin_long) / (rmax_long - rmin_long) *
-                                                    NBIN_LONG);
+                                    int bin_long = floor((norm2 - rmin_long) / (rmax_long - rmin_long) * NBIN_LONG);
                                     npcf[thread].excl_4pcf_tripleside(bin_long, bin, grid->p[k].w * primary_w);
                                 }
                                 #endif
@@ -212,10 +208,10 @@ void compute_pairs(Grid* grid,
 
                 // Now exclude 4pcf double-side self-counts
                 #if (!PREVENT_TRIANGLES)
-                if (rmin_long < rmax) {
-                    for (delta.x = -maxsep; delta.x <= maxsep; delta.x++)
-                        for (delta.y = -maxsep; delta.y <= maxsep; delta.y++)
-                            for (delta.z = -maxsep; delta.z <= maxsep; delta.z++) {
+                if (rmin_long < rmax_short) {
+                    for (delta.x = -maxsep_short; delta.x <= maxsep_short; delta.x++)
+                        for (delta.y = -maxsep_short; delta.y <= maxsep_short; delta.y++)
+                            for (delta.z = -maxsep_short; delta.z <= maxsep_short; delta.z++) {
                                 const int samecell =
                                     (delta.x == 0 && delta.y == 0 && delta.z == 0)
                                         ? 1
@@ -249,14 +245,13 @@ void compute_pairs(Grid* grid,
                                     Float norm2 = dx.norm2();
                                     // Check if this is in the correct binning
                                     // ranges
-                                    if (norm2 >= rmax2 || norm2 <= rmin2)
+                                    if (norm2 >= rmax_short2 || norm2 <= rmin_short2)
                                         continue;
 
                                     // Now what do we want to do with the pair?
                                     norm2 = sqrt(norm2);  // Now just radius
                                     // Find the radial bin
-                                    int bin = floor((norm2 - rmin) / (rmax - rmin) *
-                                                    NBIN);
+                                    int bin = floor((norm2 - rmin_short) / (rmax_short - rmin_short) * NBIN_SHORT);
 
                                     // Define x/r,y/r,z/r
                                     dx = dx / norm2;
@@ -267,8 +262,7 @@ void compute_pairs(Grid* grid,
                                     if (norm2 >= rmax_long2 || norm2 <= rmin_long2)
                                         continue;
                                     // Find the radial bin for long side
-                                    int bin_long = floor((norm2 - rmin_long) / (rmax_long - rmin_long) *
-                                                    NBIN_LONG);
+                                    int bin_long = floor((norm2 - rmin_long) / (rmax_long - rmin_long) * NBIN_LONG);
                                     npcf[thread].excl_4pcf_doubleside(pairs_i + j, bin_long, bin, grid->p[k].w * primary_w);
                                 }  // Done with this secondary particle
                             }      // Done with this delta.z loop
@@ -333,9 +327,7 @@ void compute_pairs(Grid* grid,
                                     // Now what do we want to do with the pair?
                                     norm2 = sqrt(norm2);  // Now just radius
                                     // Find the radial bin
-                                    int bin_long = floor(
-                                        (norm2 - rmin_long) /
-                                        (rmax_long - rmin_long) * NBIN_LONG);
+                                    int bin_long = floor((norm2 - rmin_long) / (rmax_long - rmin_long) * NBIN_LONG);
 
                                     // Accumulate the 4-pt correlation function
                                     npcf[thread].add_4pcf(
@@ -363,19 +355,19 @@ void compute_pairs(Grid* grid,
 #endif
 #endif
 
-    printf("# We counted  %lld pairs within [%f %f].\n", cnt, rmin, rmax);
+    printf("# We counted  %lld pairs within [%f %f].\n", cnt, rmin_short, rmax_short);
     printf("# Average of %f pairs per primary particle.\n",
            (Float)cnt / grid->np);
     Float3 boxsize = grid->rect_boxsize;
     float expected = grid->np * (4 * M_PI / 3.0) *
-                     (pow(rmax, 3.0) - pow(rmin, 3.0)) /
+                     (pow(rmax_short, 3.0) - pow(rmin_short, 3.0)) /
                      (boxsize.x * boxsize.y * boxsize.z);
     printf(
         "# We expected %1.0f pairs per primary particle, off by a factor of "
         "%f.\n",
         expected, cnt / (expected * grid->np));
 
-    printf("# We counted  %lld triplets within [%f %f].\n", cnt3, rmin, rmax);
+    printf("# We counted  %lld triplets within [%f %f].\n", cnt3, rmin_short, rmax_short);
 
     printf("# We counted  %lld pairs within [%f %f].\n", cnt2, rmin_long, rmax_long);
     printf("# Average of %f pairs per primary particle.\n",

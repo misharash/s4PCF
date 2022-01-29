@@ -18,12 +18,9 @@
 #include <omp.h>
 #endif
 
-// NBIN is the number of bins we'll sort the radii into. Must be at least N-1
-// for the N-point function We output only NPCF with bin1 < bin2 < bin3 etc. to
-// avoid degeneracy and the bins including zero separations IF NBIN is changed
-// IT MUST ALSO BE UPDATED IN modules/gpufuncs.h!
-#define NBIN 15
-#define NBIN_LONG 18
+// NBIN is the number of bins we'll sort the radii into.
+#define NBIN_SHORT 15 // short sides
+#define NBIN_LONG 18 // long side
 
 // Whether to exclude bins that can allow triangles (k=l), r_ij<=r_ik+r_jl
 // Beneficial for performance - avoids triple loop
@@ -93,10 +90,10 @@ class Pairs {
     Pairs() {
         // Initialize the binning
         int ec = 0;
-        ec += posix_memalign((void**)&xi0, PAGE, sizeof(double) * NBIN);
-        ec += posix_memalign((void**)&xi2, PAGE, sizeof(double) * NBIN);
+        ec += posix_memalign((void**)&xi0, PAGE, sizeof(double) * NBIN_SHORT);
+        ec += posix_memalign((void**)&xi2, PAGE, sizeof(double) * NBIN_SHORT);
         assert(ec == 0);
-        for (int j = 0; j < NBIN; j++) {
+        for (int j = 0; j < NBIN_SHORT; j++) {
             xi0[j] = 0;
             xi2[j] = 0;
         }
@@ -108,14 +105,14 @@ class Pairs {
     }
 
     inline void load(Float* xi0ptr, Float* xi2ptr) {
-        for (int j = 0; j < NBIN; j++) {
+        for (int j = 0; j < NBIN_SHORT; j++) {
             xi0[j] = xi0ptr[j];
             xi2[j] = xi2ptr[j];
         }
     }
 
     inline void save(Float* xi0ptr, Float* xi2ptr) {
-        for (int j = 0; j < NBIN; j++) {
+        for (int j = 0; j < NBIN_SHORT; j++) {
             xi0ptr[j] = xi0[j];
             xi2ptr[j] = xi2[j];
         }
@@ -130,20 +127,20 @@ class Pairs {
 
     void sum_power(Pairs* p) {
         // Just add up all of the threaded pairs into the zeroth element
-        for (int i = 0; i < NBIN; i++) {
+        for (int i = 0; i < NBIN_SHORT; i++) {
             xi0[i] += p->xi0[i];
             xi2[i] += p->xi2[i];
         }
     }
     //
     //   void report_pairs() {
-    //   for (int j=0; j<NBIN; j++) {
+    //   for (int j=0; j<NBIN_SHORT; j++) {
     //     printf("Pairs %2d %9.0f %9.0f\n",
     // 		j, xi0[j], xi2[j]);
     // }
     //   }
 
-    void save_pairs(char* out_string, Float rmin, Float rmax, Float sumw) {
+    void save_pairs(char* out_string, Float rmin_short, Float rmax_short, Float sumw) {
         // Print the output isotropic 2PCF counts to file
 
         // Create output directory if not in existence
@@ -159,19 +156,19 @@ class Pairs {
         FILE* OutFile = fopen(out_name, "w");
 
         // Print some useful information
-        fprintf(OutFile, "## Bins: %d\n", NBIN);
-        fprintf(OutFile, "## Minimum Radius = %.2e\n", rmin);
-        fprintf(OutFile, "## Maximum Radius = %.2e\n", rmax);
+        fprintf(OutFile, "## Bins: %d\n", NBIN_SHORT);
+        fprintf(OutFile, "## Minimum Radius = %.2e\n", rmin_short);
+        fprintf(OutFile, "## Maximum Radius = %.2e\n", rmax_short);
         fprintf(OutFile, "## Format: Row 1 = radial bin 1, Row 2 = xi^a\n");
 
         // First print the indices of the first radial bin
-        for (int i = 0; i < NBIN; i++)
+        for (int i = 0; i < NBIN_SHORT; i++)
             fprintf(OutFile, "%2d\t", i);
         fprintf(OutFile, " \n");
 
         // Now print the 2PCF
         Float norm = pow(sumw, -2); // normalize by sum of (positive) weights squared
-        for (int i = 0; i < NBIN; i++)
+        for (int i = 0; i < NBIN_SHORT; i++)
             fprintf(OutFile, "%le\t", xi0[i]*norm);
         fprintf(OutFile, "\n");
 
@@ -196,10 +193,10 @@ typedef struct Xdiff {
 
 NPCF npcf[MAXTHREAD];
 
-void set_npcf(Float rmin, Float rmax, Float rmin_long, Float rmax_long) {
+void set_npcf(Float rmin_short, Float rmax_short, Float rmin_long, Float rmax_long) {
     for (int t = 0; t < MAXTHREAD; t++) {
         npcf[t].reset();
-        npcf[t].calc_4pcf_indices(rmin, rmax, rmin_long, rmax_long);
+        npcf[t].calc_4pcf_indices(rmin_short, rmax_short, rmin_long, rmax_long);
     }
 }
 
@@ -232,11 +229,11 @@ void usage() {
             "   -def: This allows one to accept the defaults without "
             "giving other entries.\n");
     fprintf(stderr,
-            "   -rmin <rmin>: The minimum radius of the smallest pair "
-            "bin.  Default 0.\n");
+            "   -rmin_short <rmin_short>: The minimum radius of the short "
+            "side bin.  Default 0.\n");
     fprintf(stderr,
-            "   -rmax <rmax>: The maximum radius of the largest pair "
-            "bin.  Default 30.\n");
+            "   -rmax_short <rmax_short>: The maximum radius of the short "
+            "side bin.  Default 30.\n");
     fprintf(stderr,
             "   -rmin_long <rmin_long>: The minimum radius of the long "
             "side bin.  Default 30.\n");
@@ -260,12 +257,12 @@ void usage() {
             "   -nside <nside>: The grid size for accelerating the "
             "pair count.  Default 8.\n");
     fprintf(stderr,
-            "             Recommend having several grid cells per rmax.\n");
+            "             Recommend having several grid cells per rmax_short.\n");
     fprintf(stderr, "\n");
     fprintf(stderr,
-            "One other important parameter can only be set during "
+            "Other important parameters can only be set during "
             "compilations:\n");
-    fprintf(stderr, "   NBIN:  The number of radial bins.\n");
+    fprintf(stderr, "   NBIN_SHORT:  The number of radial bins for short sides.\n");
     fprintf(stderr,
             "   NBIN_LONG:  The number of radial bins for long side.\n");
     fprintf(stderr,
@@ -303,16 +300,16 @@ int main(int argc, char* argv[]) {
     Float rescale = 1.0;  // If left zero or negative, set rescale=boxsize
     // The particles will be read from the unit cube, but then scaled by
     // boxsize.
-    Float rmax = 30;
+    Float rmax_short = 30;
     // The maximum radius of the largest bin.
-    Float rmin = 0;
+    Float rmin_short = 0;
     // The minimum radius of the smallest bin.
     Float rmax_long = 120;
     // The maximum radius of the long side bin.
     Float rmin_long = 30;
     // The minimum radius of the long side bin.
     int nside = 50;
-    // The grid size, which should be tuned to match boxsize and rmax.
+    // The grid size, which should be tuned to match boxsize and rmax_short.
     // Don't forget to adjust this if changing boxsize!
     int make_random = 0;
     // If set, we'll just throw random periodic points instead of reading the
@@ -345,10 +342,10 @@ int main(int argc, char* argv[]) {
             rect_boxsize = {tmp_box, tmp_box, tmp_box};
         } else if (!strcmp(argv[i], "-rescale") || !strcmp(argv[i], "-scale"))
             rescale = atof(argv[++i]);
-        else if (!strcmp(argv[i], "-rmax") || !strcmp(argv[i], "-max"))
-            rmax = atof(argv[++i]);
-        else if (!strcmp(argv[i], "-rmin") || !strcmp(argv[i], "-min"))
-            rmin = atof(argv[++i]);
+        else if (!strcmp(argv[i], "-rmax_short") || !strcmp(argv[i], "-max_short"))
+            rmax_short = atof(argv[++i]);
+        else if (!strcmp(argv[i], "-rmin_short") || !strcmp(argv[i], "-min_short"))
+            rmin_short = atof(argv[++i]);
         else if (!strcmp(argv[i], "-rmax_long") ||
                  !strcmp(argv[i], "-max_long"))
             rmax_long = atof(argv[++i]);
@@ -407,8 +404,10 @@ int main(int argc, char* argv[]) {
                         // argument, causing disaster.
 
     assert(box_min > 0.0);
-    assert(rmax > 0.0);
-    assert(rmin >= 0.0);
+    assert(rmax_short > 0.0);
+    assert(rmin_short >= 0.0);
+    assert(rmax_long > 0.0);
+    assert(rmin_long >= 0.0);
     assert(nside > 0);
     assert(nside < 300);  // Legal, but rather unlikely that we should use
                           // something this big!
@@ -426,15 +425,15 @@ int main(int argc, char* argv[]) {
     printf("\nBox Size = {%6.5e,%6.5e,%6.5e}\n", rect_boxsize.x, rect_boxsize.y,
            rect_boxsize.z);
     printf("Grid = %d\n", nside);
-    printf("Minimum Radius = %6.3g\n", rmin);
-    printf("Maximum Radius = %6.3g\n", rmax);
+    printf("Minimum Radius for short sides = %6.3g\n", rmin_short);
+    printf("Maximum Radius for short sides = %6.3g\n", rmax_short);
     printf("Minimum Radius for long side = %6.3g\n", rmin_long);
     printf("Maximum Radius for long side = %6.3g\n", rmax_long);
-    Float gridsize = rmax / (box_max / nside);
-    printf("Radius in Grid Units = %6.3g\n", gridsize);
+    Float gridsize = rmax_short / (box_max / nside);
+    printf("Max short radius in Grid Units = %6.3g\n", gridsize);
     if (gridsize < 1)
         printf("#\n# WARNING: grid appears inefficiently coarse\n#\n");
-    printf("Bins = %d\n", NBIN);
+    printf("Bins = %d\n", NBIN_SHORT);
 
     IOTime.Start();
     InfileReadTime.Start();
@@ -449,8 +448,7 @@ int main(int argc, char* argv[]) {
         orig_p = read_particles(rescale, &np, fname);
         assert(np > 0);
         // Update boxsize here
-        compute_bounding_box(orig_p, np, rect_boxsize, cellsize, rmax, shift,
-                             nside);
+        compute_bounding_box(orig_p, np, rect_boxsize, cellsize, fmax(rmax_short, rmax_long), shift, nside);
     }
 
     if (qinvert)
@@ -475,7 +473,7 @@ int main(int argc, char* argv[]) {
     Float grid_density = (double)np / grid.nf;
     printf("Average number of particles per grid cell = %6.2g\n", grid_density);
     printf("Average number of particles within allowed radii shell = %6.2g\n",
-           np * 4.0 * M_PI / 3.0 * (pow(rmax, 3.0) - pow(rmin, 3.0)) /
+           np * 4.0 * M_PI / 3.0 * (pow(rmax_short, 3.0) - pow(rmin_short, 3.0)) /
                (rect_boxsize.x * rect_boxsize.y * rect_boxsize.z));
     if (grid_density < 1)
         printf("#\n# WARNING: grid appears inefficiently fine.\n#\n");
@@ -483,7 +481,7 @@ int main(int argc, char* argv[]) {
     GridTime.Stop();
     IOTime.Stop();
 
-    set_npcf(rmin, rmax, rmin_long, rmax_long);
+    set_npcf(rmin_short, rmax_short, rmin_long, rmax_long);
     fflush(NULL);
 
     Prologue.Stop();
@@ -491,7 +489,7 @@ int main(int argc, char* argv[]) {
     // Everything above here takes negligible time.  This line is nearly all of
     // the work.
     PairTime.Start();
-    compute_pairs(&grid, rmin, rmax, rmin_long, rmax_long, np);
+    compute_pairs(&grid, rmin_short, rmax_short, rmin_long, rmax_long, np);
     printf("# Done counting the pairs\n");
     PairTime.Stop();
 
@@ -505,8 +503,8 @@ int main(int argc, char* argv[]) {
     // pairs[0].report_pairs();
 
     // Save the outputs
-    pairs[0].save_pairs(outstr, rmin, rmax, grid.sumw_pos);
-    npcf[0].save_power(outstr, rmin, rmax, rmin_long, rmax_long, grid.sumw_pos);
+    pairs[0].save_pairs(outstr, rmin_short, rmax_short, grid.sumw_pos);
+    npcf[0].save_power(outstr, rmin_short, rmax_short, rmin_long, rmax_long, grid.sumw_pos);
 
     npcf[0].report_timings();
 
