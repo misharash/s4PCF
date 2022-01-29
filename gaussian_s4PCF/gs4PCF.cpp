@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
             orig_p = read_particles(par.rescale, &par.np, filename, par.rstart, par.nmax);
             assert(par.np>0);
 
-            par.perbox = compute_bounding_box(orig_p, par.np, par.rect_boxsize, par.cellsize, par.rmax, shift, par.nside);
+            par.perbox = compute_bounding_box(orig_p, par.np, par.rect_boxsize, par.cellsize, fmax(par.rmax_short, par.rmax_long), shift, par.nside);
         } else {
         // If you want to just make random particles instead:
         assert(par.np>0);
@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
         printf("Average number of particles per max_radius ball = %6.2f\n",
-                par.np*4.0*M_PI/3.0*pow(par.rmax,3.0)/(par.rect_boxsize.x*par.rect_boxsize.y*par.rect_boxsize.z));
+                par.np*4.0*M_PI/3.0*pow(par.rmax_short,3.0)/(par.rect_boxsize.x*par.rect_boxsize.y*par.rect_boxsize.z));
         if (grid_density<2){
             printf("#\n# WARNING: grid appears inefficiently fine; exiting.\n#\n");
             exit(1);
