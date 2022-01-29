@@ -11,7 +11,7 @@
 class Integrals{
 private:
     CorrelationFunction *cf12, *cf13, *cf24;
-    Float rmin,rmax,rmin_long,rmax_long,mumin,mumax,dmu; //Ranges in r and mu
+    Float mumin,mumax,dmu; //Range in mu
     Float *r_high_short, *r_low_short, *r_high_long, *r_low_long; // Max and min of each radial bin
     int nbin_short, nbin_long, mbin;
     int Nbin_short, Nbin_long, Nbinpairs, N4;
@@ -64,12 +64,6 @@ public:
         reset();
 
         box=par->perbox;
-
-        rmax=par->rmax_short;
-        rmin=par->rmin_short;
-
-        rmax_long=par->rmax_long;
-        rmin_long=par->rmin_long;
 
         mumax=par->mumax;
         mumin=par->mumin;
