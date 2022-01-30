@@ -149,20 +149,6 @@ void usage() {
             "    -balance: Rescale the negative weights so that the "
             "total weight is zero.\n");
     fprintf(stderr, "    -invert: Multiply all the weights by -1.\n");
-    fprintf(stderr,
-            "    -gpu: GPU mode => 0 = CPU, 1 = GPU, 2+ = GPU alternate "
-            "kernel. This requires compilation in GPU mode.\n");
-    fprintf(stderr, "    -float: GPU mode => use floats to speed up\n");
-    fprintf(stderr,
-            "    -mixed: GPU mode => use mixed precision - alms are "
-            "floats, accumulation is doubles\n");
-    fprintf(stderr,
-            "    -global: GPU mode => use global memory always.  "
-            "Default is to offload some calcs to shared memory.\n");
-    fprintf(stderr,
-            "             Shared is faster on HPC GPUs but global is "
-            "faster on some consumer grade GPUs.\n");
-    fprintf(stderr, "    -2pcf: GPU mode => only calculate 2PCF and exit\n");
 
     exit(1);
     return;
@@ -251,20 +237,6 @@ int main(int argc, char* argv[]) {
         } else if (!strcmp(argv[i], "-def") || !strcmp(argv[i], "-default")) {
             fname = NULL;
         }
-#ifdef GPU
-        else if (!strcmp(argv[i], "-gpu"))
-            _gpumode = atoi(argv[++i]);
-        else if (!strcmp(argv[i], "-float"))
-            _gpufloat = true;
-        else if (!strcmp(argv[i], "-mixed"))
-            _gpumixed = true;
-        else if (!strcmp(argv[i], "-global"))
-            _shared = false;
-        else if (!strcmp(argv[i], "-mpkernel"))
-            _gpump = atoi(argv[++i]);
-        else if (!strcmp(argv[i], "-2pcf"))
-            _only2pcf = true;
-#endif
         else {
             fprintf(stderr, "Don't recognize %s\n", argv[i]);
             usage();
