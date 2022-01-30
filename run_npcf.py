@@ -24,6 +24,8 @@ rmin_short = 0 # minimum radius in Mpc/h
 rmax_short = 30 # maximum radius in Mpc/h
 rmin_long = 30 # minimum long side radius in Mpc/h
 rmax_long = 120 # maximum long side radius in Mpc/h
+rmin_cf = 0 # minimum fine 2PCF radius in Mpc/h
+rmax_cf = 180 # maximum fine 2PCF radius in Mpc/h
 
 # Other inputs
 scale = 1 # rescaling for co-ordinates
@@ -51,7 +53,7 @@ os.environ["OMP_NUM_THREADS"] = str(OMP_NUM_THREADS)
 # Define command to run the C++ code
 code = "./s4PCF"
 
-command = f"{code} -rmax_short {rmax_short} -rmin_short {rmin_short} -rmax_long {rmax_long} -rmin_long {rmin_long} -ngrid {ngrid} -scale {scale}"
+command = f"{code} -rmax_short {rmax_short} -rmin_short {rmin_short} -rmax_long {rmax_long} -rmin_long {rmin_long} -rmax_cf {rmax_cf} -rmin_cf {rmin_cf} -ngrid {ngrid} -scale {scale}"
 if periodic:
     command += f" -boxsize {boxsize}"
 

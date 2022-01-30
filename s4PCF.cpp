@@ -19,6 +19,9 @@
 // NBIN is the number of bins we'll sort the radii into.
 #define NBIN_SHORT 15 // short sides
 #define NBIN_LONG 18 // long side
+#define NBIN_CF 450 // fine, anisotropic 2-point correlation function
+// MBIN is number of bins for mu
+#define MBIN_CF 10 // fine, anisotropic 2-point correlation function
 
 // Whether to exclude bins that can allow triangles (k=l), r_ij<=r_ik+r_jl
 // Beneficial for performance - avoids triple loop
@@ -59,6 +62,10 @@ Float3 ceil3(float3 p) {
 
 Pairs pairs[MAXTHREAD];
 
+#include "modules/FinePairs.h"
+
+FinePairs finepairs[MAXTHREAD];
+
 // Here's a simple structure for our normalized differences of the positions
 typedef struct Xdiff {
     Float dx, dy, dz, w;
@@ -78,10 +85,11 @@ void set_npcf(Float rmin_short, Float rmax_short, Float rmin_long, Float rmax_lo
 
 void sum_power() {
     // Just add up all of the threaded power into the zeroth element
-    for (int t = 1; t < MAXTHREAD; t++)
+    for (int t = 1; t < MAXTHREAD; t++) {
         npcf[0].sum_power(npcf + t);
-    for (int t = 1; t < MAXTHREAD; t++)
         pairs[0].sum_power(pairs + t);
+        finepairs[0].sum_power(finepairs + t);
+    }
     return;
 }
 
@@ -116,6 +124,10 @@ void usage() {
     fprintf(stderr,
             "   -rmax_long <rmax_long>: The maximum radius of the long "
             "side bin.  Default 120.\n");
+    fprintf(stderr,
+            "   -rmin_cf <rmin_cf>: The minimum radius of the fine, anisotropic 2PCF bin.  Default 0.\n");
+    fprintf(stderr,
+            "   -rmax_cf <rmax_cf>: The maximum radius of the fine, anisotropic 2PCF bin.  Default 180.\n");
     fprintf(stderr, "\n");
     fprintf(stderr,
             "   -ran <np>: Ignore any file and use np random perioidic "
@@ -139,11 +151,10 @@ void usage() {
             "Other important parameters can only be set during "
             "compilations:\n");
     fprintf(stderr, "   NBIN_SHORT:  The number of radial bins for short sides.\n");
-    fprintf(stderr,
-            "   NBIN_LONG:  The number of radial bins for long side.\n");
-    fprintf(stderr,
-            "Similarly, the radial bin spacing (currently linear) is "
-            "hard-coded.\n");
+    fprintf(stderr, "   NBIN_LONG:  The number of radial bins for long side.\n");
+    fprintf(stderr, "   NBIN_CF:  The number of radial bins for fine, anisotropic 2PCF.\n");
+    fprintf(stderr, "   MBIN_CF:  The number of angular bins for fine, anisotropic 2PCF.\n");
+    fprintf(stderr, "Similarly, the radial and mu bin spacings (currently linear) are hard-coded.\n");
     fprintf(stderr, "\n");
     fprintf(stderr,
             "    -balance: Rescale the negative weights so that the "
@@ -170,6 +181,10 @@ int main(int argc, char* argv[]) {
     // The maximum radius of the long side bin.
     Float rmin_long = 30;
     // The minimum radius of the long side bin.
+    Float rmax_cf = 180;
+    // The maximum radius of fine 2pcf bin.
+    Float rmin_cf = 0;
+    // The minimum radius of fine 2pcf bin.
     int nside = 50;
     // The grid size, which should be tuned to match boxsize and rmax_short.
     // Don't forget to adjust this if changing boxsize!
@@ -208,12 +223,14 @@ int main(int argc, char* argv[]) {
             rmax_short = atof(argv[++i]);
         else if (!strcmp(argv[i], "-rmin_short") || !strcmp(argv[i], "-min_short"))
             rmin_short = atof(argv[++i]);
-        else if (!strcmp(argv[i], "-rmax_long") ||
-                 !strcmp(argv[i], "-max_long"))
+        else if (!strcmp(argv[i], "-rmax_long") || !strcmp(argv[i], "-max_long"))
             rmax_long = atof(argv[++i]);
-        else if (!strcmp(argv[i], "-rmin_long") ||
-                 !strcmp(argv[i], "-min_long"))
+        else if (!strcmp(argv[i], "-rmin_long") || !strcmp(argv[i], "-min_long"))
             rmin_long = atof(argv[++i]);
+        else if (!strcmp(argv[i], "-rmax_cf") || !strcmp(argv[i], "-max_cf"))
+            rmax_cf = atof(argv[++i]);
+        else if (!strcmp(argv[i], "-rmin_cf") || !strcmp(argv[i], "-min_cf"))
+            rmin_cf = atof(argv[++i]);
         else if (!strcmp(argv[i], "-nside") || !strcmp(argv[i], "-ngrid") ||
                  !strcmp(argv[i], "-grid"))
             nside = atoi(argv[++i]);
@@ -277,6 +294,8 @@ int main(int argc, char* argv[]) {
     printf("Maximum Radius for short sides = %6.3g\n", rmax_short);
     printf("Minimum Radius for long side = %6.3g\n", rmin_long);
     printf("Maximum Radius for long side = %6.3g\n", rmax_long);
+    printf("Minimum Radius for fine 2-point correlation function = %6.3g\n", rmin_cf);
+    printf("Maximum Radius for fine 2-point correlation function = %6.3g\n", rmax_cf);
     Float gridsize = rmax_short / (box_max / nside);
     printf("Max short radius in Grid Units = %6.3g\n", gridsize);
     if (gridsize < 1)
@@ -337,7 +356,7 @@ int main(int argc, char* argv[]) {
     // Everything above here takes negligible time.  This line is nearly all of
     // the work.
     PairTime.Start();
-    compute_pairs(&grid, rmin_short, rmax_short, rmin_long, rmax_long, np);
+    compute_pairs(&grid, rmin_short, rmax_short, rmin_long, rmax_long, rmin_cf, rmax_cf, np);
     printf("# Done counting the pairs\n");
     PairTime.Stop();
 
@@ -352,6 +371,7 @@ int main(int argc, char* argv[]) {
 
     // Save the outputs
     pairs[0].save_pairs(outstr, rmin_short, rmax_short, grid.sumw_pos);
+    finepairs[0].save_pairs(outstr, rmin_cf, rmax_cf, grid.sumw_pos);
     npcf[0].save_power(outstr, rmin_short, rmax_short, rmin_long, rmax_long, grid.sumw_pos);
 
     npcf[0].report_timings();

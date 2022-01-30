@@ -15,7 +15,7 @@ AB ($r_{ij}$) is binned differently from two others, `NBIN_LONG` bins are unifor
 AC and BD ($r_{ik}$ and $r_{jl}$) are binned in the same way, `NBIN_SHORT` bins are uniformly spaced between `rmin_short` and `rmax_short`.
 BD ($r_{jl}$) bin number is more or equal than AC ($r_{ik}$) bin number, i.e. equal bins are included, and all bins can be recovered by symmetry.
 
-`s4PCF` also outputs isotropic 2- and 3-point correlation functions in `NBIN_SHORT` bins uniformly spaced between `rmin_short` and `rmax_short`, as a by-product.
+`s4PCF` produces anisotropic 2-point correlation function in `NBIN_CF` radial bins between `rmin_cf` anf `rmax_cf` and in `MBIN_CF` mu (abs(cos(theta))) bins between 0 and 1, which can serve as input to `gs4PCF`. It also outputs isotropic 2- and 3-point correlation functions in `NBIN_SHORT` bins uniformly spaced between `rmin_short` and `rmax_short`, as a by-product.
 
 ## Self-counting and other concerns
 If `rmin_long < 2 * rmax_short`, a triple loop is activated to exclude self-counting triangles (C=D or $k=l$), while everything else is done in double loops (much faster, but often still slow).
@@ -24,4 +24,4 @@ Additionally, when `rmin_long < rmax_short` other possibilities arise: A=D ($i=l
 
 Both codes now have an option (`PREVENT_TRIANGLES` in `s4PCF` and `prevent_triangles` in `gs4PCF`, set in `gaussian_s4PCF/modules/parameters.h`) to exclude bins that allow triangular configurations (AC+BD>AB, $r_{ik}+r_{jl}>r_{ij}$) and thus skip all the self-counting exclusion, although the results then may be tricky to read and interpret.
 
-You might want to set `rmin_long >= 3 * rmax_sjort`, because then it is guaranteed that AC and BD ($r_{ik}$ and $r_{jl}$) are the shortest distances, and no self-counting issues will appear.
+You might want to set `rmin_long >= 3 * rmax_short`, because then it is guaranteed that AC and BD ($r_{ik}$ and $r_{jl}$) are the shortest distances, and no self-counting issues will appear.

@@ -31,10 +31,12 @@
 
 # Main inputs
 set periodic = 0 # whether to run with periodic boundary conditions (should also be set in Makefile)
-set rmin_short = 0 # minimum radius in Mpc/h
-set rmax_short = 30 # maximum radius in Mpc/h
-set rmin_long = 60 # minimum radius in Mpc/h
-set rmax_long = 120 # maximum radius in Mpc/h
+set rmin_short = 0 # minimum short radius in Mpc/h
+set rmax_short = 30 # maximum short radius in Mpc/h
+set rmin_long = 60 # minimum long radius in Mpc/h
+set rmax_long = 120 # maximum long radius in Mpc/h
+set rmin_cf = 0 # minimum 2PCF radius in Mpc/h
+set rmax_cf = 180 # maximum 2PCF radius in Mpc/h
 
 # Other inputs
 set scale = 1 # rescaling for co-ordinates
@@ -65,9 +67,9 @@ set OMP_NUM_THREADS = 4
 set code = ./s4PCF
 
 if ($periodic) then
-  set command = "$code -rmax_short $rmax_short -rmin_short $rmin_short -rmax_long $rmax_long -rmin_long $rmin_long -ngrid $ngrid -scale $scale -boxsize $boxsize"
+  set command = "$code -rmax_short $rmax_short -rmin_short $rmin_short -rmax_long $rmax_long -rmin_long $rmin_long -rmax_cf $rmax_cf -rmin_cf $rmin_cf -ngrid $ngrid -scale $scale -boxsize $boxsize"
 else
-  set command = "$code -rmax_short $rmax_short -rmin_short $rmin_short -rmax_long $rmax_long -rmin_long $rmin_long -ngrid $ngrid -scale $scale"
+  set command = "$code -rmax_short $rmax_short -rmin_short $rmin_short -rmax_long $rmax_long -rmin_long $rmin_long -rmax_cf $rmax_cf -rmin_cf $rmin_cf -ngrid $ngrid -scale $scale"
 endif
 
 # Create a temporary directory for saving
@@ -159,6 +161,7 @@ end    # foreach D-R loop
 # We do this in Python, and perform edge-correction unless the periodic flag is not set
 if ($periodic) then
   echo Combining files together without performing edge-corrections (using analytic R^N counts)
+  # this script not adapted yet
   python python/combine_files_periodic.py $tmpout/$root $Ngal $boxsize $rmin_short $rmax_short >>& $errlog
 else
   echo Combining files together and performing edge-corrections

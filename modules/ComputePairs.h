@@ -8,17 +8,18 @@ void compute_pairs(Grid* grid,
                    Float rmax_short,
                    Float rmin_long,
                    Float rmax_long,
+                   Float rmin_cf,
+                   Float rmax_cf,
                    int np) {
-    int maxsep_short =
-        ceil(rmax_short / grid->cellsize);  // Maximum distance we must search
-    int maxsep_long =
-        ceil(rmax_long /
-             grid->cellsize);  // Maximum distance we must search for long side
+    int maxsep_short = ceil(rmax_short / grid->cellsize);  // Maximum distance we must search for short side
+    int maxsep_long_or_cf = ceil(fmax(rmax_long, rmax_cf) / grid->cellsize);  // Maximum distance we must search for long side
     int ne;
     Float rmax_short2 = rmax_short * rmax_short;
     Float rmin_short2 = rmin_short * rmin_short;  // rmax2*1e-12;    // Just an underflow guard
     Float rmax_long2 = rmax_long * rmax_long;
     Float rmin_long2 = rmin_long * rmin_long;
+    Float rmax_cf2 = rmax_cf * rmax_cf;
+    Float rmin_cf2 = rmin_cf * rmin_cf;
     uint64 cnt = 0, cnt2 = 0, cnt3 = 0;
 
     Pairs* pairs_i = new Pairs[np];
@@ -122,10 +123,8 @@ void compute_pairs(Grid* grid,
 
                             // Accumulate the 2-pt correlation function
                             // We include the weight for each pair
-                            pairs_i[j].add(bin, dx.z,
-                                            grid->p[k].w * primary_w);
-                            pairs[thread].add(bin, dx.z,
-                                                grid->p[k].w * primary_w);
+                            pairs_i[j].add(bin, dx.z, grid->p[k].w * primary_w);
+                            pairs[thread].add(bin, dx.z, grid->p[k].w * primary_w);
                             // Exclude self-counts from 3PCF
                             npcf[thread].excl_3pcf(bin, grid->p[k].w * grid->p[k].w * primary_w);
 
@@ -269,11 +268,11 @@ void compute_pairs(Grid* grid,
             icnt++;
             // This is done on CPU - calculate add_to_power here
             // Acumulate powers here - code in NPCF.h
-            for (delta.x = -maxsep_long; delta.x <= maxsep_long;
+            for (delta.x = -maxsep_long_or_cf; delta.x <= maxsep_long_or_cf;
                     delta.x++)
-                for (delta.y = -maxsep_long; delta.y <= maxsep_long;
+                for (delta.y = -maxsep_long_or_cf; delta.y <= maxsep_long_or_cf;
                         delta.y++)
-                    for (delta.z = -maxsep_long; delta.z <= maxsep_long;
+                    for (delta.z = -maxsep_long_or_cf; delta.z <= maxsep_long_or_cf;
                             delta.z++) {
                         // Check that the cell is in the grid!
                         int tmp_test = grid->test_cell(prim_id + delta);
@@ -296,22 +295,25 @@ void compute_pairs(Grid* grid,
                                 continue;  // Exclude self-count and secondary points whose pairs have not been computed yet
                             Float3 dx = grid->p[k].pos - ppos;
                             Float norm2 = dx.norm2();
-                            // Check if this is in the correct binning
-                            // ranges
-                            if (norm2 < rmax_long2 &&
-                                norm2 > rmin_long2)
+                            // Check if this is in the correct binning ranges
+                            if ((norm2 < rmax_long2 && norm2 > rmin_long2) || (norm2 < rmax_cf2 && norm2 > rmin_cf2))
                                 cnt2++;
                             else
                                 continue;
 
                             // Now what do we want to do with the pair?
                             norm2 = sqrt(norm2);  // Now just radius
-                            // Find the radial bin
+                            dx = dx / norm2; // normalize coordinate difference
+                            // Find the long radial bin
                             int bin_long = floor((norm2 - rmin_long) / (rmax_long - rmin_long) * NBIN_LONG);
-
                             // Accumulate the 4-pt correlation function
-                            npcf[thread].add_4pcf(
-                                pairs_i + j, pairs_i + k, bin_long);
+                            if ((bin_long >= 0) && (bin_long < NBIN_LONG)) // if not out of bounds
+                                npcf[thread].add_4pcf(pairs_i + j, pairs_i + k, bin_long);
+                            // Find the fine 2pcf radial bin
+                            int bin_cf = floor((norm2 - rmin_long) / (rmax_long - rmin_long) * NBIN_CF);
+                            // Accumulate fine 2PCF
+                            if ((bin_cf >= 0) && (bin_cf < NBIN_CF)) // if not out of bounds
+                                finepairs[thread].add(bin_cf, dx.z, grid->p[k].w * primary_w);
                         }  // Done with this secondary particle
                     }      // Done with this delta.z loop
                             // done with delta.y loop
