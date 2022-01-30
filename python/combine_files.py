@@ -1,4 +1,4 @@
-### combine_files.py (Michael Rashkovetskyi, adapted from Oliver Philcox, 2021)
+### combine_files.py (Michael Rashkovetskyi, adapted from Oliver Philcox, 2021-2022)
 # This reads in a set of (data-random) and (random) particle counts and uses them to construct the N-point functions, including edge-correction
 # It is designed to be used with the run_npcf.csh script
 # Currently 2PCF, 3PCF and 4PCF are supported.
@@ -15,9 +15,6 @@ else:
 
 print("Reading in files starting with %s\n"%inputs)
 
-def get_script_path():
-    return os.path.dirname(os.path.realpath(sys.argv[0]))
-
 # Decide which N we're using
 Ns = []
 for N in range(10):
@@ -31,22 +28,8 @@ if len(Ns)==0:
 for N in Ns:
     # First load in R piece
     R_file = inputs+'.r_%dpcf.txt'%N
-    if N==2:
-        countsR = np.loadtxt(R_file,skiprows=5)
-    elif N==3:
-        countsR = np.loadtxt(R_file,skiprows=6)
-    elif N==4:
-        countsR = np.loadtxt(R_file,skiprows=9)
-    else:
-        raise Exception("%dPCF not yet configured"%N)
-        
-    # Extract radial bins
-    if N==2:
-        bin1 = np.loadtxt(R_file,skiprows=4,max_rows=1)
-    elif N==3:
-        bin1,bin2 = np.loadtxt(R_file,skiprows=4,max_rows=2)
-    elif N==4:
-        bin1,bin2,bin3 = np.loadtxt(R_file,skiprows=6,max_rows=3)
+    if N not in [2, 3, 4]:
+        raise Exception("%dPCF not yet configured" % N)
 
     # Now load in D-R pieces and average
     countsN_all = []
@@ -54,12 +37,7 @@ for N in Ns:
         DmR_file = inputs+'.n%s_%dpcf.txt'%(str(i).zfill(2),N)
         if not os.path.exists(DmR_file): continue
         # Extract counts
-        if N==2:
-            countsN_all.append(np.loadtxt(DmR_file,skiprows=5))
-        elif N==3:
-            countsN_all.append(np.loadtxt(DmR_file,skiprows=6)) # skipping rows with radial bins and ell
-        elif N==4:
-            countsN_all.append(np.loadtxt(DmR_file,skiprows=9))
+        countsN_all.append(np.loadtxt(DmR_file)[N-1:]) # skipping rows with radial bins
     countsN_all = np.asarray(countsN_all)
     N_files = len(countsN_all)
     countsN = np.mean(countsN_all,axis=0)
@@ -68,49 +46,25 @@ for N in Ns:
 
     # Now compute edge-correction equations
 
-    if N==2:
-        # isotropic 2PCF is easy!
-        zeta = countsN/countsR
+    # isotropic 2/3/4PCF are all easy and similar
+    zeta = countsN/countsR
 
-        # Now save the output to file, copying the first few lines from the N files
-        zeta_file = inputs+'.zeta_%dpcf.txt'%N
-        rfile = open(R_file,"r")
-        zfile = open(zeta_file,"w")
-        for l,line in enumerate(rfile):
-            if l>=5: continue
-            zfile.write(line)
-        for a in range(len(zeta)):
-            zfile.write("%.8e\t"%zeta[a])
-        zfile.close()
-
-    if N==3:
-        # isotropic 3PCF should be easy too
-        zeta = countsN/countsR
-
-        # Now save the output to file, copying the first few lines from the N files
-        zeta_file = inputs+'.zeta_%dpcf.txt'%N
-        rfile = open(R_file,"r")
-        zfile = open(zeta_file,"w")
-        for l,line in enumerate(rfile):
-            if l>=6: continue
-            zfile.write(line)
-        for a in range(len(zeta)):
-            zfile.write("%.8e\t"%zeta[a])
-        zfile.close()
-
-    if N==4:
-        # isotropic 4PCF should be easy as well
-        zeta = countsN/countsR
-
-        # Now save the output to file, copying the first few lines from the N files
-        zeta_file = inputs+'.zeta_%dpcf.txt'%N
-        rfile = open(R_file,"r")
-        zfile = open(zeta_file,"w")
-        for l,line in enumerate(rfile):
-            if l>=9: continue
-            zfile.write(line)
-        for a in range(len(zeta)):
-            zfile.write("%.8e\t"%zeta[a])
-        zfile.close()
+    # Now save the output to file, copying the first few lines from the N files
+    zeta_file = inputs+'.zeta_%dpcf.txt'%N
+    rfile = open(R_file,"r")
+    zfile = open(zeta_file,"w")
+    # copy comments and bins from first random file
+    lnc = 0 # counter of lines that are not comments
+    for line in rfile:
+        if lnc >= N-1: break # only need N-1 data lines, i.e. radial bins, can terminate loop afterwards
+        if line[0] != "#": lnc += 1
+        zfile.write(line)
+    rfile.close()
+    # write NPCF
+    for a in range(len(zeta)):
+        for b in range(len(zeta[0])):
+            zfile.write("%.8e\t" % zeta[a, b])
+        zfile.write("\n")
+    zfile.close()
 
     print("Computed %dPCF using %d (data-random) files, saving to %s\n"%(N,N_files,zeta_file))
