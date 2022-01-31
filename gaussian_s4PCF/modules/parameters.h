@@ -95,7 +95,7 @@ public:
 	Float mumax = 1.0;
 
     // Number of loops over which to refine the correlation function
-    int cf_loops = 10;
+    int cf_loops = 0;
 
     // The periodicity of the position-space cube.
 	Float boxsize = 200.; // this is only used if the input particles are made randomly
