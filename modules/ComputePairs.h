@@ -56,11 +56,7 @@ void compute_pairs(Grid* grid,
         if (int(ne % 1000) == 0)
             printf("Computing cell %d of %d on thread %d\n", ne, grid->nf,
                    thread);
-#ifdef FIVEPCF
-        else if (int(ne % 100) == 0)
-            printf("Computing cell %d of %d on thread %d\n", ne, grid->nf,
-                   thread);
-#endif
+
         // Loop over primary cells.
         Cell primary = grid->c[n];
         integer3 prim_id = grid->cell_id_from_1d(n);
@@ -77,10 +73,7 @@ void compute_pairs(Grid* grid,
             for (delta.x = -maxsep_short; delta.x <= maxsep_short; delta.x++)
                 for (delta.y = -maxsep_short; delta.y <= maxsep_short; delta.y++)
                     for (delta.z = -maxsep_short; delta.z <= maxsep_short; delta.z++) {
-                        const int samecell =
-                            (delta.x == 0 && delta.y == 0 && delta.z == 0)
-                                ? 1
-                                : 0;
+                        const int samecell = (delta.x == 0 && delta.y == 0 && delta.z == 0) ? 1 : 0;
 
                         // Check that the cell is in the grid!
                         int tmp_test = grid->test_cell(prim_id + delta);
