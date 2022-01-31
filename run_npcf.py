@@ -33,12 +33,12 @@ ngrid = 50 # grid size for accelerating pair count
 boxsize = 1000 # only used if periodic=1
 
 # File names and directories
-datafilenames = [f"qpm_galaxies/{i+1:04d}.xyz" for i in range(50)] # data filenames
-randomfilename = "qpm_randoms_50x.xyzwj" # random filename
+datafilenames = ["qpm_galaxies.xyzwj"] # data filenames
+randomfilename = "qpm_randoms_1x.xyzwj" # random filename
 outroot = "qpm_galaxies" # base name for outputs
 workdir = os.getcwd()
 indir = os.path.join(workdir, "gaussian_s4PCF") # input directory (see above for required contents)
-outdir = os.path.join(workdir, "out") # output file directory
+outdir = os.path.join(workdir, "out_test") # output file directory
 tmpdir = os.path.join(workdir, "tmp") # temporary directory for intermediate file storage for this run (ideally somewhere with fast I/O)
 scriptname = "run_npcf.py"
 
@@ -47,7 +47,7 @@ do_full = 1 # whether do full computation or only combine existing intermediate 
 ##########################################################
 
 # Set OpenMP number of threads
-OMP_NUM_THREADS = 30
+OMP_NUM_THREADS = 4
 os.environ["OMP_NUM_THREADS"] = str(OMP_NUM_THREADS)
 
 # Define command to run the C++ code
