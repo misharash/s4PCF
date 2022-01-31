@@ -374,8 +374,6 @@ int main(int argc, char* argv[]) {
     finepairs[0].save_pairs(outstr, rmin_cf, rmax_cf, grid.sumw_pos);
     npcf[0].save_power(outstr, rmin_short, rmax_short, rmin_long, rmax_long, grid.sumw_pos);
 
-    npcf[0].report_timings();
-
     Epilogue.Stop();
     TotalTime.Stop();
     printf("\n# Total Time: %4.1f s\n", TotalTime.Elapsed());

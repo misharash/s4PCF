@@ -7,13 +7,10 @@ class NPCF {
     // This should accumulate the NPCF contributions, for all combination of
     // bins.
    public:
-    STimer AddTimer3, ExclTimer3;
 
 // Array to hold the 3PCF
 #define N3PCF (NBIN_SHORT * (NBIN_SHORT + 1) / 2)  // only compute bin1 <= bin2
     Float threepcf[N3PCF];
-
-    STimer AddTimer4, ExclTimer4_doubleside, ExclTimer4_tripleside, ExclTimer4_triangle;
 
 // Sizes of 4pcf array
 #define N4PCF NBIN_LONG* NBIN_SHORT*(NBIN_SHORT + 1) / 2
@@ -80,19 +77,6 @@ class NPCF {
 
         for (int x = 0; x < N4PCF; x++)
             fourpcf[x] += c->fourpcf[x];
-    }
-
-    void report_timings() {
-        /// Report the NPCF timing measurements (for a single CPU).
-
-        printf("\n# Single CPU Timings");
-        printf("\n3PCF self-counts exclusion: %.3f s", ExclTimer3.Elapsed());
-        printf("\n3PCF addition: %.3f s", AddTimer3.Elapsed());
-        printf("\n4PCF triangle self-counts exclusion: %.3f s", ExclTimer4_triangle.Elapsed());
-        printf("\n4PCF double-side self-counts exclusion: %.3f s", ExclTimer4_doubleside.Elapsed());
-        printf("\n4PCF triple-side self-counts exclusion: %.3f s", ExclTimer4_tripleside.Elapsed());
-        printf("\n4PCF addition: %.3f s", AddTimer4.Elapsed());
-        printf("\n");
     }
 
     void save_power(char* out_string,
@@ -203,12 +187,9 @@ class NPCF {
         // wprod is product of weights
 
         // delete 3PCF self-count
-        ExclTimer3.Start();
 
         int index = getbin_pair(bin, bin);
         threepcf[index] -= wprod;
-
-        ExclTimer3.Stop();
 
         return;
     }
@@ -217,15 +198,12 @@ class NPCF {
         // wp is the primary galaxy weight
 
         // COMPUTE 3PCF CONTRIBUTIONS
-        AddTimer3.Start();
 
         for (int i = 0, ct = 0; i < NBIN_SHORT; i++) {
             for (int j = i; j < NBIN_SHORT; j++, ct++) {
                 threepcf[ct] = pairs->xi0[i] * pairs->xi0[j] / wp;
             }
         }
-
-        AddTimer3.Stop();
 
         return;
     }
@@ -234,12 +212,8 @@ class NPCF {
     inline void excl_4pcf_triangle(int bin_long, int bin, int bin2, Float wprod) {
         // COMPUTE 4PCF CONTRIBUTIONS
 
-        ExclTimer4_triangle.Start();
-
         if (bin <= bin2)
             fourpcf[fourpcf_bin_number[bin_long][bin][bin2]] -= wprod;
-
-        ExclTimer4_triangle.Stop();
 
         return;
     }
@@ -247,15 +221,12 @@ class NPCF {
     inline void excl_4pcf_doubleside(Pairs* pair, int bin_long, int bin, Float wprod) {
         // COMPUTE 4PCF CONTRIBUTIONS
 
-        ExclTimer4_doubleside.Start();
-
         // Iterate over second bin
         for (int bin2 = 0; bin2 <= bin; bin2++)
             fourpcf[fourpcf_bin_number[bin_long][bin][bin2]] -= pair->xi0[bin2] * wprod;
         for (int bin2 = bin; bin2 < NBIN_SHORT; bin2++) // go over bin=bin2 second time for consistency
             fourpcf[fourpcf_bin_number[bin_long][bin][bin2]] -= pair->xi0[bin2] * wprod;
         // End of radial binning loops
-        ExclTimer4_doubleside.Stop();
 
         return;
     }
@@ -263,11 +234,7 @@ class NPCF {
     inline void excl_4pcf_tripleside(int bin_long, int bin, Float wprod) {
         // COMPUTE 4PCF CONTRIBUTIONS
 
-        ExclTimer4_tripleside.Start();
-
         fourpcf[fourpcf_bin_number[bin_long][bin][bin]] += wprod * wprod;
-        
-        ExclTimer4_tripleside.Stop();
 
         return;
     }
@@ -275,8 +242,6 @@ class NPCF {
 
     inline void add_4pcf(Pairs* pair1, Pairs* pair2, int bin_long) {
         // COMPUTE 4PCF CONTRIBUTIONS
-
-        AddTimer4.Start();
 
         // Iterate over second bin
         for (int j = 0; j < NBIN_SHORT; j++) {
@@ -288,7 +253,6 @@ class NPCF {
             }
         }
         // End of radial binning loops
-        AddTimer4.Stop();
 
         return;
     }
