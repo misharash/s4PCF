@@ -303,7 +303,7 @@ void compute_pairs(Grid* grid,
                             if ((bin_long >= 0) && (bin_long < NBIN_LONG)) // if not out of bounds
                                 npcf[thread].add_4pcf(pairs_i + j, pairs_i + k, bin_long);
                             // Find the fine 2pcf radial bin
-                            int bin_cf = floor((norm2 - rmin_long) / (rmax_long - rmin_long) * NBIN_CF);
+                            int bin_cf = floor((norm2 - rmin_cf) / (rmax_cf - rmin_cf) * NBIN_CF);
                             // Accumulate fine 2PCF
                             if ((bin_cf >= 0) && (bin_cf < NBIN_CF)) // if not out of bounds
                                 finepairs[thread].add(bin_cf, dx.z, grid->p[k].w * primary_w);
