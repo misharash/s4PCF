@@ -32,9 +32,9 @@ for N in Ns:
     
     countsR_all = []
     for i in range(Nrandoms):
-        R_file = inroot+'.r%d_%dpcf.txt'%(i, N)
+        R_file = inroot+'.r%d_%spcf.txt'%(i, N)
         # Extract counts
-        countsR_all.append(np.loadtxt(R_file, skiprows=(len(N)>1))[N-1:]) # skipping rows with radial bins, skip 1 more row for fine2
+        countsR_all.append(np.loadtxt(R_file, skiprows=(len(N)>1))[n-1:]) # skipping rows with radial bins, skip 1 more row for fine2
     countsR_all = np.asarray(countsR_all)
     countsR = np.mean(countsR_all,axis=0)
 
