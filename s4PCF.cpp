@@ -8,8 +8,6 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 
-#include <complex>
-
 #include "STimer.cc"
 #include "threevector.hh"
 
@@ -18,17 +16,17 @@
 #include <omp.h>
 #endif
 
-// NBIN is the number of bins we'll sort the radii into. Must be at least N-1
-// for the N-point function We output only NPCF with bin1 < bin2 < bin3 etc. to
-// avoid degeneracy and the bins including zero separations IF NBIN is changed
-// IT MUST ALSO BE UPDATED IN modules/gpufuncs.h!
-#define NBIN 15
-#define NBIN_LONG 18
+// NBIN is the number of bins we'll sort the radii into.
+#define NBIN_SHORT 10 // short sides
+#define NBIN_LONG 30 // long side
+#define NBIN_CF 500 // fine, anisotropic 2-point correlation function
+// MBIN is number of bins for mu
+#define MBIN_CF 10 // fine, anisotropic 2-point correlation function
 
 // Whether to exclude bins that can allow triangles (k=l), r_ij<=r_ik+r_jl
 // Beneficial for performance - avoids triple loop
 // Also guarantees no other 4PCF self-counts are involved
-#define PREVENT_TRIANGLES 1
+#define PREVENT_TRIANGLES 0
 
 // MAXTHREAD is the maximum number of allowed threads.
 // Big trouble if actual number exceeds this!
@@ -43,22 +41,6 @@ typedef unsigned long long int uint64;
 typedef double Float;
 // typedef float Float;
 typedef double3 Float3;
-// typedef std::complex<double> Complex;
-// typedef std::complex<float> Complex;
-
-// 0 = CPU
-// 1 = GPU primary kernel
-// 2, higher = alternate kernels
-short _gpumode = 0;
-// kernel for multipoles and pairs -- 2 = new kernel, 1 = old kernel
-short _gpump = 2;
-bool _gpufloat = false;
-bool _gpumixed = false;
-// if true, use shared memory for x0i and x2i binning, if false use global
-// memory
-bool _shared = true;
-// if true, calculate 2PCF only
-bool _only2pcf = false;
 
 // We need a vector floor3 function
 Float3 floor3(float3 p) {
@@ -75,116 +57,14 @@ Float3 ceil3(float3 p) {
 // Classes specifying cells and grids
 #include "modules/Basics.h"
 
-// ========================== Accumulate the two-pcf pair counts
-// ================
-
-class Pairs {
-   public:
-    double* xi0;
-
-   private:
-    double* xi2;
-
-   private:
-    double empty[8];  // Just to try to keep the threads from working on similar
-                      // memory
-
-   public:
-    Pairs() {
-        // Initialize the binning
-        int ec = 0;
-        ec += posix_memalign((void**)&xi0, PAGE, sizeof(double) * NBIN);
-        ec += posix_memalign((void**)&xi2, PAGE, sizeof(double) * NBIN);
-        assert(ec == 0);
-        for (int j = 0; j < NBIN; j++) {
-            xi0[j] = 0;
-            xi2[j] = 0;
-        }
-        empty[0] = 0.0;  // To avoid a warning
-    }
-    ~Pairs() {
-        free(xi0);
-        free(xi2);
-    }
-
-    inline void load(Float* xi0ptr, Float* xi2ptr) {
-        for (int j = 0; j < NBIN; j++) {
-            xi0[j] = xi0ptr[j];
-            xi2[j] = xi2ptr[j];
-        }
-    }
-
-    inline void save(Float* xi0ptr, Float* xi2ptr) {
-        for (int j = 0; j < NBIN; j++) {
-            xi0ptr[j] = xi0[j];
-            xi2ptr[j] = xi2[j];
-        }
-    }
-
-    inline void add(int b, Float dz, Float w) {
-        // Add up the weighted pair for the monopole and quadrupole correlation
-        // function
-        xi0[b] += w;
-        xi2[b] += w * (3.0 * dz * dz - 1) * 0.5;
-    }
-
-    void sum_power(Pairs* p) {
-        // Just add up all of the threaded pairs into the zeroth element
-        for (int i = 0; i < NBIN; i++) {
-            xi0[i] += p->xi0[i];
-            xi2[i] += p->xi2[i];
-        }
-    }
-    //
-    //   void report_pairs() {
-    //   for (int j=0; j<NBIN; j++) {
-    //     printf("Pairs %2d %9.0f %9.0f\n",
-    // 		j, xi0[j], xi2[j]);
-    // }
-    //   }
-
-    void save_pairs(char* out_string, Float rmin, Float rmax, Float sumw) {
-        // Print the output isotropic 2PCF counts to file
-
-        // Create output directory if not in existence
-        const char* out_dir;
-        out_dir = "output";
-        if (mkdir(out_dir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0) {
-            printf("\nCreating output directory\n");
-        }
-
-        // First create output files
-        char out_name[1000];
-        snprintf(out_name, sizeof out_name, "output/%s_2pcf.txt", out_string);
-        FILE* OutFile = fopen(out_name, "w");
-
-        // Print some useful information
-        fprintf(OutFile, "## Bins: %d\n", NBIN);
-        fprintf(OutFile, "## Minimum Radius = %.2e\n", rmin);
-        fprintf(OutFile, "## Maximum Radius = %.2e\n", rmax);
-        fprintf(OutFile, "## Format: Row 1 = radial bin 1, Row 2 = xi^a\n");
-
-        // First print the indices of the first radial bin
-        for (int i = 0; i < NBIN; i++)
-            fprintf(OutFile, "%2d\t", i);
-        fprintf(OutFile, " \n");
-
-        // Now print the 2PCF
-        Float norm = pow(sumw, -2); // normalize by sum of (positive) weights squared
-        for (int i = 0; i < NBIN; i++)
-            fprintf(OutFile, "%le\t", xi0[i]*norm);
-        fprintf(OutFile, "\n");
-
-        fflush(NULL);
-
-        // Close open files
-        fclose(OutFile);
-
-        printf("\n2PCF Output saved to %s\n", out_name);
-    }
-};
+// Pair counts class
+#include "modules/Pairs.h"
 
 Pairs pairs[MAXTHREAD];
+
+#include "modules/FinePairs.h"
+
+FinePairs finepairs[MAXTHREAD];
 
 // Here's a simple structure for our normalized differences of the positions
 typedef struct Xdiff {
@@ -196,19 +76,20 @@ typedef struct Xdiff {
 
 NPCF npcf[MAXTHREAD];
 
-void set_npcf(Float rmin, Float rmax, Float rmin_long, Float rmax_long) {
+void set_npcf(Float rmin_short, Float rmax_short, Float rmin_long, Float rmax_long) {
     for (int t = 0; t < MAXTHREAD; t++) {
         npcf[t].reset();
-        npcf[t].calc_4pcf_indices(rmin, rmax, rmin_long, rmax_long);
+        npcf[t].calc_4pcf_indices(rmin_short, rmax_short, rmin_long, rmax_long);
     }
 }
 
 void sum_power() {
     // Just add up all of the threaded power into the zeroth element
-    for (int t = 1; t < MAXTHREAD; t++)
+    for (int t = 1; t < MAXTHREAD; t++) {
         npcf[0].sum_power(npcf + t);
-    for (int t = 1; t < MAXTHREAD; t++)
         pairs[0].sum_power(pairs + t);
+        finepairs[0].sum_power(finepairs + t);
+    }
     return;
 }
 
@@ -221,7 +102,7 @@ void sum_power() {
 // ================================ main() =============================
 
 void usage() {
-    fprintf(stderr, "\nUsage for encore/encoreAVX:\n");
+    fprintf(stderr, "\nUsage for s4PCF:\n");
     fprintf(stderr,
             "   -in <file>: The input file (space-separated x,y,z,w).  "
             "Default sample.dat.\n");
@@ -232,17 +113,21 @@ void usage() {
             "   -def: This allows one to accept the defaults without "
             "giving other entries.\n");
     fprintf(stderr,
-            "   -rmin <rmin>: The minimum radius of the smallest pair "
-            "bin.  Default 0.\n");
+            "   -rmin_short <rmin_short>: The minimum radius of the short "
+            "side bin.  Default 0.\n");
     fprintf(stderr,
-            "   -rmax <rmax>: The maximum radius of the largest pair "
-            "bin.  Default 30.\n");
-    fprintf(stderr,
-            "   -rmin_long <rmin_long>: The minimum radius of the long "
+            "   -rmax_short <rmax_short>: The maximum radius of the short "
             "side bin.  Default 30.\n");
     fprintf(stderr,
+            "   -rmin_long <rmin_long>: The minimum radius of the long "
+            "side bin.  Default 60.\n");
+    fprintf(stderr,
             "   -rmax_long <rmax_long>: The maximum radius of the long "
-            "side bin.  Default 120.\n");
+            "side bin.  Default 240.\n");
+    fprintf(stderr,
+            "   -rmin_cf <rmin_cf>: The minimum radius of the fine, anisotropic 2PCF bin.  Default 0.\n");
+    fprintf(stderr,
+            "   -rmax_cf <rmax_cf>: The maximum radius of the fine, anisotropic 2PCF bin.  Default 300.\n");
     fprintf(stderr, "\n");
     fprintf(stderr,
             "   -ran <np>: Ignore any file and use np random perioidic "
@@ -260,36 +145,21 @@ void usage() {
             "   -nside <nside>: The grid size for accelerating the "
             "pair count.  Default 8.\n");
     fprintf(stderr,
-            "             Recommend having several grid cells per rmax.\n");
+            "             Recommend having several grid cells per rmax_short.\n");
     fprintf(stderr, "\n");
     fprintf(stderr,
-            "One other important parameter can only be set during "
+            "Other important parameters can only be set during "
             "compilations:\n");
-    fprintf(stderr, "   NBIN:  The number of radial bins.\n");
-    fprintf(stderr,
-            "   NBIN_LONG:  The number of radial bins for long side.\n");
-    fprintf(stderr,
-            "Similarly, the radial bin spacing (currently linear) is "
-            "hard-coded.\n");
+    fprintf(stderr, "   NBIN_SHORT:  The number of radial bins for short sides.\n");
+    fprintf(stderr, "   NBIN_LONG:  The number of radial bins for long side.\n");
+    fprintf(stderr, "   NBIN_CF:  The number of radial bins for fine, anisotropic 2PCF.\n");
+    fprintf(stderr, "   MBIN_CF:  The number of angular bins for fine, anisotropic 2PCF.\n");
+    fprintf(stderr, "Similarly, the radial and mu bin spacings (currently linear) are hard-coded.\n");
     fprintf(stderr, "\n");
     fprintf(stderr,
             "    -balance: Rescale the negative weights so that the "
             "total weight is zero.\n");
     fprintf(stderr, "    -invert: Multiply all the weights by -1.\n");
-    fprintf(stderr,
-            "    -gpu: GPU mode => 0 = CPU, 1 = GPU, 2+ = GPU alternate "
-            "kernel. This requires compilation in GPU mode.\n");
-    fprintf(stderr, "    -float: GPU mode => use floats to speed up\n");
-    fprintf(stderr,
-            "    -mixed: GPU mode => use mixed precision - alms are "
-            "floats, accumulation is doubles\n");
-    fprintf(stderr,
-            "    -global: GPU mode => use global memory always.  "
-            "Default is to offload some calcs to shared memory.\n");
-    fprintf(stderr,
-            "             Shared is faster on HPC GPUs but global is "
-            "faster on some consumer grade GPUs.\n");
-    fprintf(stderr, "    -2pcf: GPU mode => only calculate 2PCF and exit\n");
 
     exit(1);
     return;
@@ -303,16 +173,20 @@ int main(int argc, char* argv[]) {
     Float rescale = 1.0;  // If left zero or negative, set rescale=boxsize
     // The particles will be read from the unit cube, but then scaled by
     // boxsize.
-    Float rmax = 30;
+    Float rmax_short = 30;
     // The maximum radius of the largest bin.
-    Float rmin = 0;
+    Float rmin_short = 0;
     // The minimum radius of the smallest bin.
-    Float rmax_long = 120;
+    Float rmax_long = 240;
     // The maximum radius of the long side bin.
-    Float rmin_long = 30;
+    Float rmin_long = 60;
     // The minimum radius of the long side bin.
+    Float rmax_cf = 300;
+    // The maximum radius of fine 2pcf bin.
+    Float rmin_cf = 0;
+    // The minimum radius of fine 2pcf bin.
     int nside = 50;
-    // The grid size, which should be tuned to match boxsize and rmax.
+    // The grid size, which should be tuned to match boxsize and rmax_short.
     // Don't forget to adjust this if changing boxsize!
     int make_random = 0;
     // If set, we'll just throw random periodic points instead of reading the
@@ -345,16 +219,18 @@ int main(int argc, char* argv[]) {
             rect_boxsize = {tmp_box, tmp_box, tmp_box};
         } else if (!strcmp(argv[i], "-rescale") || !strcmp(argv[i], "-scale"))
             rescale = atof(argv[++i]);
-        else if (!strcmp(argv[i], "-rmax") || !strcmp(argv[i], "-max"))
-            rmax = atof(argv[++i]);
-        else if (!strcmp(argv[i], "-rmin") || !strcmp(argv[i], "-min"))
-            rmin = atof(argv[++i]);
-        else if (!strcmp(argv[i], "-rmax_long") ||
-                 !strcmp(argv[i], "-max_long"))
+        else if (!strcmp(argv[i], "-rmax_short") || !strcmp(argv[i], "-max_short"))
+            rmax_short = atof(argv[++i]);
+        else if (!strcmp(argv[i], "-rmin_short") || !strcmp(argv[i], "-min_short"))
+            rmin_short = atof(argv[++i]);
+        else if (!strcmp(argv[i], "-rmax_long") || !strcmp(argv[i], "-max_long"))
             rmax_long = atof(argv[++i]);
-        else if (!strcmp(argv[i], "-rmin_long") ||
-                 !strcmp(argv[i], "-min_long"))
+        else if (!strcmp(argv[i], "-rmin_long") || !strcmp(argv[i], "-min_long"))
             rmin_long = atof(argv[++i]);
+        else if (!strcmp(argv[i], "-rmax_cf") || !strcmp(argv[i], "-max_cf"))
+            rmax_cf = atof(argv[++i]);
+        else if (!strcmp(argv[i], "-rmin_cf") || !strcmp(argv[i], "-min_cf"))
+            rmin_cf = atof(argv[++i]);
         else if (!strcmp(argv[i], "-nside") || !strcmp(argv[i], "-ngrid") ||
                  !strcmp(argv[i], "-grid"))
             nside = atoi(argv[++i]);
@@ -378,20 +254,6 @@ int main(int argc, char* argv[]) {
         } else if (!strcmp(argv[i], "-def") || !strcmp(argv[i], "-default")) {
             fname = NULL;
         }
-#ifdef GPU
-        else if (!strcmp(argv[i], "-gpu"))
-            _gpumode = atoi(argv[++i]);
-        else if (!strcmp(argv[i], "-float"))
-            _gpufloat = true;
-        else if (!strcmp(argv[i], "-mixed"))
-            _gpumixed = true;
-        else if (!strcmp(argv[i], "-global"))
-            _shared = false;
-        else if (!strcmp(argv[i], "-mpkernel"))
-            _gpump = atoi(argv[++i]);
-        else if (!strcmp(argv[i], "-2pcf"))
-            _only2pcf = true;
-#endif
         else {
             fprintf(stderr, "Don't recognize %s\n", argv[i]);
             usage();
@@ -407,8 +269,10 @@ int main(int argc, char* argv[]) {
                         // argument, causing disaster.
 
     assert(box_min > 0.0);
-    assert(rmax > 0.0);
-    assert(rmin >= 0.0);
+    assert(rmax_short > 0.0);
+    assert(rmin_short >= 0.0);
+    assert(rmax_long > 0.0);
+    assert(rmin_long >= 0.0);
     assert(nside > 0);
     assert(nside < 300);  // Legal, but rather unlikely that we should use
                           // something this big!
@@ -426,15 +290,17 @@ int main(int argc, char* argv[]) {
     printf("\nBox Size = {%6.5e,%6.5e,%6.5e}\n", rect_boxsize.x, rect_boxsize.y,
            rect_boxsize.z);
     printf("Grid = %d\n", nside);
-    printf("Minimum Radius = %6.3g\n", rmin);
-    printf("Maximum Radius = %6.3g\n", rmax);
+    printf("Minimum Radius for short sides = %6.3g\n", rmin_short);
+    printf("Maximum Radius for short sides = %6.3g\n", rmax_short);
     printf("Minimum Radius for long side = %6.3g\n", rmin_long);
     printf("Maximum Radius for long side = %6.3g\n", rmax_long);
-    Float gridsize = rmax / (box_max / nside);
-    printf("Radius in Grid Units = %6.3g\n", gridsize);
+    printf("Minimum Radius for fine 2-point correlation function = %6.3g\n", rmin_cf);
+    printf("Maximum Radius for fine 2-point correlation function = %6.3g\n", rmax_cf);
+    Float gridsize = rmax_short / (box_max / nside);
+    printf("Max short radius in Grid Units = %6.3g\n", gridsize);
     if (gridsize < 1)
         printf("#\n# WARNING: grid appears inefficiently coarse\n#\n");
-    printf("Bins = %d\n", NBIN);
+    printf("Bins = %d\n", NBIN_SHORT);
 
     IOTime.Start();
     InfileReadTime.Start();
@@ -449,8 +315,7 @@ int main(int argc, char* argv[]) {
         orig_p = read_particles(rescale, &np, fname);
         assert(np > 0);
         // Update boxsize here
-        compute_bounding_box(orig_p, np, rect_boxsize, cellsize, rmax, shift,
-                             nside);
+        compute_bounding_box(orig_p, np, rect_boxsize, cellsize, fmax(rmax_short, rmax_long), shift, nside);
     }
 
     if (qinvert)
@@ -475,7 +340,7 @@ int main(int argc, char* argv[]) {
     Float grid_density = (double)np / grid.nf;
     printf("Average number of particles per grid cell = %6.2g\n", grid_density);
     printf("Average number of particles within allowed radii shell = %6.2g\n",
-           np * 4.0 * M_PI / 3.0 * (pow(rmax, 3.0) - pow(rmin, 3.0)) /
+           np * 4.0 * M_PI / 3.0 * (pow(rmax_short, 3.0) - pow(rmin_short, 3.0)) /
                (rect_boxsize.x * rect_boxsize.y * rect_boxsize.z));
     if (grid_density < 1)
         printf("#\n# WARNING: grid appears inefficiently fine.\n#\n");
@@ -483,7 +348,7 @@ int main(int argc, char* argv[]) {
     GridTime.Stop();
     IOTime.Stop();
 
-    set_npcf(rmin, rmax, rmin_long, rmax_long);
+    set_npcf(rmin_short, rmax_short, rmin_long, rmax_long);
     fflush(NULL);
 
     Prologue.Stop();
@@ -491,7 +356,7 @@ int main(int argc, char* argv[]) {
     // Everything above here takes negligible time.  This line is nearly all of
     // the work.
     PairTime.Start();
-    compute_pairs(&grid, rmin, rmax, rmin_long, rmax_long, np);
+    compute_pairs(&grid, rmin_short, rmax_short, rmin_long, rmax_long, rmin_cf, rmax_cf, np);
     printf("# Done counting the pairs\n");
     PairTime.Stop();
 
@@ -505,10 +370,9 @@ int main(int argc, char* argv[]) {
     // pairs[0].report_pairs();
 
     // Save the outputs
-    pairs[0].save_pairs(outstr, rmin, rmax, grid.sumw_pos);
-    npcf[0].save_power(outstr, rmin, rmax, rmin_long, rmax_long, grid.sumw_pos);
-
-    npcf[0].report_timings();
+    pairs[0].save_pairs(outstr, rmin_short, rmax_short, grid.sumw_pos);
+    finepairs[0].save_pairs(outstr, rmin_cf, rmax_cf, grid.sumw_pos);
+    npcf[0].save_power(outstr, rmin_short, rmax_short, rmin_long, rmax_long, grid.sumw_pos);
 
     Epilogue.Stop();
     TotalTime.Stop();

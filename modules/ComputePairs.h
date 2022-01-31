@@ -4,21 +4,22 @@
 // ====================  Computing the pairs ==================
 
 void compute_pairs(Grid* grid,
-                   Float rmin,
-                   Float rmax,
+                   Float rmin_short,
+                   Float rmax_short,
                    Float rmin_long,
                    Float rmax_long,
+                   Float rmin_cf,
+                   Float rmax_cf,
                    int np) {
-    int maxsep =
-        ceil(rmax / grid->cellsize);  // Maximum distance we must search
-    int maxsep_long =
-        ceil(rmax_long /
-             grid->cellsize);  // Maximum distance we must search for long side
+    int maxsep_short = ceil(rmax_short / grid->cellsize);  // Maximum distance we must search for short side
+    int maxsep_long_or_cf = ceil(fmax(rmax_long, rmax_cf) / grid->cellsize);  // Maximum distance we must search for long side
     int ne;
-    Float rmax2 = rmax * rmax;
-    Float rmin2 = rmin * rmin;  // rmax2*1e-12;    // Just an underflow guard
+    Float rmax_short2 = rmax_short * rmax_short;
+    Float rmin_short2 = rmin_short * rmin_short;  // rmax2*1e-12;    // Just an underflow guard
     Float rmax_long2 = rmax_long * rmax_long;
     Float rmin_long2 = rmin_long * rmin_long;
+    Float rmax_cf2 = rmax_cf * rmax_cf;
+    Float rmin_cf2 = rmin_cf * rmin_cf;
     uint64 cnt = 0, cnt2 = 0, cnt3 = 0;
 
     Pairs* pairs_i = new Pairs[np];
@@ -55,11 +56,7 @@ void compute_pairs(Grid* grid,
         if (int(ne % 1000) == 0)
             printf("Computing cell %d of %d on thread %d\n", ne, grid->nf,
                    thread);
-#ifdef FIVEPCF
-        else if (int(ne % 100) == 0)
-            printf("Computing cell %d of %d on thread %d\n", ne, grid->nf,
-                   thread);
-#endif
+
         // Loop over primary cells.
         Cell primary = grid->c[n];
         integer3 prim_id = grid->cell_id_from_1d(n);
@@ -67,21 +64,136 @@ void compute_pairs(Grid* grid,
         // continue; // To skip all of the list-building and summations.
         // Everything else takes negligible time
         // Now we need to loop over all primary particles in this cell
-        // For MP kernel 2 simply increment icnt.  Everything is done in kernel.
-        if (_gpumode > 0 && _gpump == 2)
-            icnt += primary.np;
-        else
-            for (int j = primary.start; j < primary.start + primary.np; j++) {
-                int mloaded = 0;
+        for (int j = primary.start; j < primary.start + primary.np; j++) {
+            Float primary_w = grid->p[j].w;
+            // Then loop over secondaries, cell-by-cell
+            integer3 delta;
+            if (thread == 0)
+                accpairs.Start();
+            for (delta.x = -maxsep_short; delta.x <= maxsep_short; delta.x++)
+                for (delta.y = -maxsep_short; delta.y <= maxsep_short; delta.y++)
+                    for (delta.z = -maxsep_short; delta.z <= maxsep_short; delta.z++) {
+                        const int samecell = (delta.x == 0 && delta.y == 0 && delta.z == 0) ? 1 : 0;
 
-                Float primary_w = grid->p[j].w;
-                // Then loop over secondaries, cell-by-cell
-                integer3 delta;
-                if (thread == 0)
-                    accpairs.Start();
-                for (delta.x = -maxsep; delta.x <= maxsep; delta.x++)
-                    for (delta.y = -maxsep; delta.y <= maxsep; delta.y++)
-                        for (delta.z = -maxsep; delta.z <= maxsep; delta.z++) {
+                        // Check that the cell is in the grid!
+                        int tmp_test = grid->test_cell(prim_id + delta);
+                        if (tmp_test < 0)
+                            continue;
+                        Cell sec = grid->c[tmp_test];
+
+                        // Define primary position
+                        Float3 ppos = grid->p[j].pos;
+#ifdef PERIODIC
+                        ppos -= grid->cell_sep(delta);
+#endif
+
+                        // This is the position of the particle as viewed
+                        // from the secondary cell. Now loop over the
+                        // particles in this secondary cell
+                        for (int k = sec.start; k < sec.start + sec.np;
+                                k++) {
+                            // Now we're considering these two particles!
+                            if (samecell && j == k)
+                                continue;  // Exclude self-count
+                            Float3 dx = grid->p[k].pos - ppos;
+                            Float norm2 = dx.norm2();
+                            // Check if this is in the correct binning
+                            // ranges
+                            if (norm2 < rmax_short2 && norm2 > rmin_short2)
+                                cnt++;
+                            else
+                                continue;
+
+                            // Now what do we want to do with the pair?
+                            norm2 = sqrt(norm2);  // Now just radius
+                            // Find the radial bin
+                            int bin = floor((norm2 - rmin_short) / (rmax_short - rmin_short) * NBIN_SHORT);
+
+                            // Define x/r,y/r,z/r
+                            dx = dx / norm2;
+
+                            // continue;   // Skip pairs and multipoles
+
+                            // Accumulate the 2-pt correlation function
+                            // We include the weight for each pair
+                            pairs_i[j].add(bin, dx.z, grid->p[k].w * primary_w);
+                            pairs[thread].add(bin, dx.z, grid->p[k].w * primary_w);
+                            // Exclude self-counts from 3PCF
+                            npcf[thread].excl_3pcf(bin, grid->p[k].w * grid->p[k].w * primary_w);
+
+                            // Exclude triangular self-counts from 4PCF
+                            #if (!PREVENT_TRIANGLES)
+                            if (rmin_long < 2*rmax_short) {
+                                integer3 delta2;
+                                for (delta2.x = -maxsep_short; delta2.x <= maxsep_short; delta2.x++)
+                                    for (delta2.y = -maxsep_short; delta2.y <= maxsep_short; delta2.y++)
+                                        for (delta.z = -maxsep_short; delta.z <= maxsep_short; delta2.z++) {
+                                            // Check that the cell is in the grid!
+                                            int tmp_test = grid->test_cell(prim_id + delta2);
+                                            if (tmp_test < 0)
+                                                continue;
+                                            Cell third = grid->c[tmp_test];
+                                            // This is the position of the particle as viewed
+                                            // from the secondary cell. Now loop over the
+                                            // particles in this secondary cell
+                                            for (int l = third.start; l < third.start + third.np;
+                                                l++) {
+                                                // Now we're considering these two particles!
+                                                if ((j==l) || (k==l))
+                                                    continue;  // Exclude self-count
+                                                Float3 dx = grid->p[l].pos - ppos;
+                                                Float norm_2 = dx.norm2();
+                                                Float3 dx_l = grid->p[l].pos - grid->p[k].pos;
+                                                Float norm_l2 = dx_l.norm2();
+                                                // Check if this is in the correct binning
+                                                // ranges
+                                                if (norm_2 < rmax_short2 && norm_2 > rmin_short2 && norm_l2 < rmax_long2 && norm_l2 > rmin_long2)
+                                                    cnt3++;
+                                                else
+                                                    continue;
+
+                                                // Now what do we want to do with the pair?
+                                                norm_2 = sqrt(norm_2);  // Now just radius
+                                                norm_l2 = sqrt(norm_l2);
+                                                // Find the radial bins
+                                                int bin2 = floor((norm_2 - rmin_short) / (rmax_short - rmin_short) * NBIN_SHORT);
+                                                // if (bin2 < bin) continue; // count triples only in one order
+                                                int bin_long = floor((norm_l2 - rmin_long) / (rmax_long - rmin_long) * NBIN_LONG);
+
+                                                // Exclude self-counts from 4PCF
+                                                npcf[thread].excl_4pcf_triangle(bin_long, bin, bin2,
+                                                                                grid->p[l].w * grid->p[k].w * primary_w * primary_w);
+                                            }  // Done with this secondary particle
+                                        }      // Done with this delta.z loop
+                                // done with delta.y loop
+                                // done with delta.x loop
+                            }
+                            #endif
+
+                            // Exclude triple-side self-counts from 4PCF
+                            #if (!PREVENT_TRIANGLES)
+                            if (rmin_long < rmax_short) {
+                                if (norm2 >= rmax_long2 || norm2 <= rmin_long2)
+                                    continue;
+                                int bin_long = floor((norm2 - rmin_long) / (rmax_long - rmin_long) * NBIN_LONG);
+                                npcf[thread].excl_4pcf_tripleside(bin_long, bin, grid->p[k].w * primary_w);
+                            }
+                            #endif
+                        }  // Done with this secondary particle
+                    }      // Done with this delta.z loop
+            // done with delta.y loop
+            // done with delta.x loop
+            if (thread == 0) {
+                accpairs.Stop();
+                powertime.Start();
+            }
+
+            // Now exclude 4pcf double-side self-counts
+            #if (!PREVENT_TRIANGLES)
+            if (rmin_long < rmax_short) {
+                for (delta.x = -maxsep_short; delta.x <= maxsep_short; delta.x++)
+                    for (delta.y = -maxsep_short; delta.y <= maxsep_short; delta.y++)
+                        for (delta.z = -maxsep_short; delta.z <= maxsep_short; delta.z++) {
                             const int samecell =
                                 (delta.x == 0 && delta.y == 0 && delta.z == 0)
                                     ? 1
@@ -103,251 +215,101 @@ void compute_pairs(Grid* grid,
                             // from the secondary cell. Now loop over the
                             // particles in this secondary cell
                             for (int k = sec.start; k < sec.start + sec.np;
-                                 k++) {
+                                k++) {
                                 // Now we're considering these two particles!
                                 if (samecell && j == k)
                                     continue;  // Exclude self-count
-                                if (mloaded && grid->p[k].w >= 0)
-                                    continue;
-                                // This particle has already been included in
-                                // the file we loaded.
                                 Float3 dx = grid->p[k].pos - ppos;
                                 Float norm2 = dx.norm2();
                                 // Check if this is in the correct binning
                                 // ranges
-                                if (norm2 < rmax2 && norm2 > rmin2)
-                                    cnt++;
-                                else
+                                if (norm2 >= rmax_short2 || norm2 <= rmin_short2)
                                     continue;
 
                                 // Now what do we want to do with the pair?
                                 norm2 = sqrt(norm2);  // Now just radius
                                 // Find the radial bin
-                                int bin = floor((norm2 - rmin) / (rmax - rmin) *
-                                                NBIN);
+                                int bin = floor((norm2 - rmin_short) / (rmax_short - rmin_short) * NBIN_SHORT);
 
                                 // Define x/r,y/r,z/r
                                 dx = dx / norm2;
 
                                 // continue;   // Skip pairs and multipoles
 
-                                // Accumulate the 2-pt correlation function
-                                // We include the weight for each pair
-                                pairs_i[j].add(bin, dx.z,
-                                               grid->p[k].w * primary_w);
-                                pairs[thread].add(bin, dx.z,
-                                                  grid->p[k].w * primary_w);
-                                // Exclude self-counts from 3PCF
-                                npcf[thread].excl_3pcf(bin, grid->p[k].w * grid->p[k].w * primary_w);
-
-                                // Exclude triangular self-counts from 4PCF
-                                #if (!PREVENT_TRIANGLES)
-                                if (rmin_long < 2*rmax) {
-                                    integer3 delta2;
-                                    for (delta2.x = -maxsep; delta2.x <= maxsep; delta2.x++)
-                                        for (delta2.y = -maxsep; delta2.y <= maxsep; delta2.y++)
-                                            for (delta.z = -maxsep; delta.z <= maxsep; delta2.z++) {
-                                                // Check that the cell is in the grid!
-                                                int tmp_test = grid->test_cell(prim_id + delta2);
-                                                if (tmp_test < 0)
-                                                    continue;
-                                                Cell third = grid->c[tmp_test];
-                                                // This is the position of the particle as viewed
-                                                // from the secondary cell. Now loop over the
-                                                // particles in this secondary cell
-                                                for (int l = third.start; l < third.start + third.np;
-                                                    l++) {
-                                                    // Now we're considering these two particles!
-                                                    if ((j==l) || (k==l))
-                                                        continue;  // Exclude self-count
-                                                    Float3 dx = grid->p[l].pos - ppos;
-                                                    Float norm_2 = dx.norm2();
-                                                    Float3 dx_l = grid->p[l].pos - grid->p[k].pos;
-                                                    Float norm_l2 = dx_l.norm2();
-                                                    // Check if this is in the correct binning
-                                                    // ranges
-                                                    if (norm_2 < rmax2 && norm_2 > rmin2 && norm_l2 < rmax_long2 && norm_l2 > rmin_long2)
-                                                        cnt3++;
-                                                    else
-                                                        continue;
-
-                                                    // Now what do we want to do with the pair?
-                                                    norm_2 = sqrt(norm_2);  // Now just radius
-                                                    norm_l2 = sqrt(norm_l2);
-                                                    // Find the radial bins
-                                                    int bin2 = floor((norm_2 - rmin) / (rmax - rmin) *
-                                                                    NBIN);
-                                                    // if (bin2 < bin) continue; // count triples only in one order
-                                                    int bin_long = floor((norm_l2 - rmin_long) / (rmax_long - rmin_long) *
-                                                                    NBIN_LONG);
-
-                                                    // Exclude self-counts from 4PCF
-                                                    npcf[thread].excl_4pcf_triangle(bin_long, bin, bin2,
-                                                                                    grid->p[l].w * grid->p[k].w * primary_w * primary_w);
-                                                }  // Done with this secondary particle
-                                            }      // Done with this delta.z loop
-                                    // done with delta.y loop
-                                    // done with delta.x loop
-                                }
-                                #endif
-
-                                // Exclude triple-side self-counts from 4PCF
-                                #if (!PREVENT_TRIANGLES)
-                                if (rmin_long < rmax) {
-                                    if (norm2 >= rmax_long2 || norm2 <= rmin_long2)
-                                        continue;
-                                    int bin_long = floor((norm2 - rmin_long) / (rmax_long - rmin_long) *
-                                                    NBIN_LONG);
-                                    npcf[thread].excl_4pcf_tripleside(bin_long, bin, grid->p[k].w * primary_w);
-                                }
-                                #endif
+                                // Exclude self-counts from 4PCF
+                                if (norm2 >= rmax_long2 || norm2 <= rmin_long2)
+                                    continue;
+                                // Find the radial bin for long side
+                                int bin_long = floor((norm2 - rmin_long) / (rmax_long - rmin_long) * NBIN_LONG);
+                                npcf[thread].excl_4pcf_doubleside(pairs_i + j, bin_long, bin, grid->p[k].w * primary_w);
                             }  // Done with this secondary particle
                         }      // Done with this delta.z loop
                 // done with delta.y loop
                 // done with delta.x loop
-                if (thread == 0) {
-                    accpairs.Stop();
-                    powertime.Start();
-                }
+            }
+            #endif
 
-                // Now exclude 4pcf double-side self-counts
-                #if (!PREVENT_TRIANGLES)
-                if (rmin_long < rmax) {
-                    for (delta.x = -maxsep; delta.x <= maxsep; delta.x++)
-                        for (delta.y = -maxsep; delta.y <= maxsep; delta.y++)
-                            for (delta.z = -maxsep; delta.z <= maxsep; delta.z++) {
-                                const int samecell =
-                                    (delta.x == 0 && delta.y == 0 && delta.z == 0)
-                                        ? 1
-                                        : 0;
+            // Now combine pair counts into 3pcf counts
+            npcf[thread].add_3pcf(pairs_i + j, primary_w);
 
-                                // Check that the cell is in the grid!
-                                int tmp_test = grid->test_cell(prim_id + delta);
-                                if (tmp_test < 0)
-                                    continue;
-                                Cell sec = grid->c[tmp_test];
+            // Now combine pair counts into 4pcf counts
 
-                                // Define primary position
-                                Float3 ppos = grid->p[j].pos;
+            icnt++;
+            // This is done on CPU - calculate add_to_power here
+            // Acumulate powers here - code in NPCF.h
+            for (delta.x = -maxsep_long_or_cf; delta.x <= maxsep_long_or_cf;
+                    delta.x++)
+                for (delta.y = -maxsep_long_or_cf; delta.y <= maxsep_long_or_cf;
+                        delta.y++)
+                    for (delta.z = -maxsep_long_or_cf; delta.z <= maxsep_long_or_cf;
+                            delta.z++) {
+                        // Check that the cell is in the grid!
+                        int tmp_test = grid->test_cell(prim_id + delta);
+                        if (tmp_test < 0)
+                            continue;
+                        Cell sec = grid->c[tmp_test];
+
+                        // Define primary position
+                        Float3 ppos = grid->p[j].pos;
 #ifdef PERIODIC
-                                ppos -= grid->cell_sep(delta);
+                        ppos -= grid->cell_sep(delta);
 #endif
 
-                                // This is the position of the particle as viewed
-                                // from the secondary cell. Now loop over the
-                                // particles in this secondary cell
-                                for (int k = sec.start; k < sec.start + sec.np;
-                                    k++) {
-                                    // Now we're considering these two particles!
-                                    if (samecell && j == k)
-                                        continue;  // Exclude self-count
-                                    if (mloaded && grid->p[k].w >= 0)
-                                        continue;
-                                    // This particle has already been included in
-                                    // the file we loaded.
-                                    Float3 dx = grid->p[k].pos - ppos;
-                                    Float norm2 = dx.norm2();
-                                    // Check if this is in the correct binning
-                                    // ranges
-                                    if (norm2 >= rmax2 || norm2 <= rmin2)
-                                        continue;
+                        // This is the position of the particle as
+                        // viewed from the secondary cell. Now loop over
+                        // the particles in this secondary cell
+                        for (int k = sec.start; k < sec.start + sec.np; k++) {
+                            // Now we're considering these two particles!
+                            if (j <= k)
+                                continue;  // Exclude self-count and secondary points whose pairs have not been computed yet
+                            Float3 dx = grid->p[k].pos - ppos;
+                            Float norm2 = dx.norm2();
+                            // Check if this is in the correct binning ranges
+                            if ((norm2 < rmax_long2 && norm2 > rmin_long2) || (norm2 < rmax_cf2 && norm2 > rmin_cf2))
+                                cnt2++;
+                            else
+                                continue;
 
-                                    // Now what do we want to do with the pair?
-                                    norm2 = sqrt(norm2);  // Now just radius
-                                    // Find the radial bin
-                                    int bin = floor((norm2 - rmin) / (rmax - rmin) *
-                                                    NBIN);
-
-                                    // Define x/r,y/r,z/r
-                                    dx = dx / norm2;
-
-                                    // continue;   // Skip pairs and multipoles
-
-                                    // Exclude self-counts from 4PCF
-                                    if (norm2 >= rmax_long2 || norm2 <= rmin_long2)
-                                        continue;
-                                    // Find the radial bin for long side
-                                    int bin_long = floor((norm2 - rmin_long) / (rmax_long - rmin_long) *
-                                                    NBIN_LONG);
-                                    npcf[thread].excl_4pcf_doubleside(pairs_i + j, bin_long, bin, grid->p[k].w * primary_w);
-                                }  // Done with this secondary particle
-                            }      // Done with this delta.z loop
-                    // done with delta.y loop
-                    // done with delta.x loop
-                }
-                #endif
-
-                // Now combine pair counts into 3pcf counts
-                npcf[thread].add_3pcf(pairs_i + j, primary_w);
-
-                // Now combine pair counts into 4pcf counts
-
-                icnt++;
-                if (_gpumode == 0) {
-                    // This is done on CPU - calculate add_to_power here
-                    // Acumulate powers here - code in NPCF.h (uses GPU kernels)
-                    for (delta.x = -maxsep_long; delta.x <= maxsep_long;
-                         delta.x++)
-                        for (delta.y = -maxsep_long; delta.y <= maxsep_long;
-                             delta.y++)
-                            for (delta.z = -maxsep_long; delta.z <= maxsep_long;
-                                 delta.z++) {
-                                // Check that the cell is in the grid!
-                                int tmp_test = grid->test_cell(prim_id + delta);
-                                if (tmp_test < 0)
-                                    continue;
-                                Cell sec = grid->c[tmp_test];
-
-                                // Define primary position
-                                Float3 ppos = grid->p[j].pos;
-#ifdef PERIODIC
-                                ppos -= grid->cell_sep(delta);
-#endif
-
-                                // This is the position of the particle as
-                                // viewed from the secondary cell. Now loop over
-                                // the particles in this secondary cell
-                                for (int k = sec.start; k < sec.start + sec.np;
-                                     k++) {
-                                    // Now we're considering these two
-                                    // particles!
-                                    if (j <= k)
-                                        continue;  // Exclude self-count and
-                                                   // secondary points whose
-                                                   // pairs have not been
-                                                   // computed yet
-                                    if (mloaded && grid->p[k].w >= 0)
-                                        continue;
-                                    // This particle has already been included
-                                    // in the file we loaded.
-                                    Float3 dx = grid->p[k].pos - ppos;
-                                    Float norm2 = dx.norm2();
-                                    // Check if this is in the correct binning
-                                    // ranges
-                                    if (norm2 < rmax_long2 &&
-                                        norm2 > rmin_long2)
-                                        cnt2++;
-                                    else
-                                        continue;
-
-                                    // Now what do we want to do with the pair?
-                                    norm2 = sqrt(norm2);  // Now just radius
-                                    // Find the radial bin
-                                    int bin_long = floor(
-                                        (norm2 - rmin_long) /
-                                        (rmax_long - rmin_long) * NBIN_LONG);
-
-                                    // Accumulate the 4-pt correlation function
-                                    npcf[thread].add_4pcf(
-                                        pairs_i + j, pairs_i + k, bin_long);
-                                }  // Done with this secondary particle
-                            }      // Done with this delta.z loop
-                                   // done with delta.y loop
-                    // done with delta.x loop
-                    if (thread == 0)
-                        powertime.Stop();
-                }
-            }  // Done with this primary particle
+                            // Now what do we want to do with the pair?
+                            norm2 = sqrt(norm2);  // Now just radius
+                            dx = dx / norm2; // normalize coordinate difference
+                            // Find the long radial bin
+                            int bin_long = floor((norm2 - rmin_long) / (rmax_long - rmin_long) * NBIN_LONG);
+                            // Accumulate the 4-pt correlation function
+                            if ((bin_long >= 0) && (bin_long < NBIN_LONG)) // if not out of bounds
+                                npcf[thread].add_4pcf(pairs_i + j, pairs_i + k, bin_long);
+                            // Find the fine 2pcf radial bin
+                            int bin_cf = floor((norm2 - rmin_cf) / (rmax_cf - rmin_cf) * NBIN_CF);
+                            // Accumulate fine 2PCF
+                            if ((bin_cf >= 0) && (bin_cf < NBIN_CF)) // if not out of bounds
+                                finepairs[thread].add(bin_cf, dx.z, grid->p[k].w * primary_w);
+                        }  // Done with this secondary particle
+                    }      // Done with this delta.z loop
+                            // done with delta.y loop
+            // done with delta.x loop
+            if (thread == 0)
+                powertime.Stop();
+        }  // Done with this primary particle
 
     }  // Done with this primary cell, end of omp pragma
 
@@ -363,19 +325,19 @@ void compute_pairs(Grid* grid,
 #endif
 #endif
 
-    printf("# We counted  %lld pairs within [%f %f].\n", cnt, rmin, rmax);
+    printf("# We counted  %lld pairs within [%f %f].\n", cnt, rmin_short, rmax_short);
     printf("# Average of %f pairs per primary particle.\n",
            (Float)cnt / grid->np);
     Float3 boxsize = grid->rect_boxsize;
     float expected = grid->np * (4 * M_PI / 3.0) *
-                     (pow(rmax, 3.0) - pow(rmin, 3.0)) /
+                     (pow(rmax_short, 3.0) - pow(rmin_short, 3.0)) /
                      (boxsize.x * boxsize.y * boxsize.z);
     printf(
         "# We expected %1.0f pairs per primary particle, off by a factor of "
         "%f.\n",
         expected, cnt / (expected * grid->np));
 
-    printf("# We counted  %lld triplets within [%f %f].\n", cnt3, rmin, rmax);
+    printf("# We counted  %lld triplets within [%f %f].\n", cnt3, rmin_short, rmax_short);
 
     printf("# We counted  %lld pairs within [%f %f].\n", cnt2, rmin_long, rmax_long);
     printf("# Average of %f pairs per primary particle.\n",

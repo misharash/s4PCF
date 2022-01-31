@@ -125,7 +125,7 @@ class compute_integral{
             RandomDraws *rd13 = which_rd(all_rd,I1,I3);
             RandomDraws *rd24 = which_rd(all_rd,I2,I4);
 
-            nbin = par->nbin; // number of radial bins
+            nbin = par->nbin_short; // number of radial bins
             mbin = par->mbin; // number of mu bins
 
             STimer initial, TotalTime; // Time initialization

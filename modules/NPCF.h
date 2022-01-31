@@ -7,16 +7,13 @@ class NPCF {
     // This should accumulate the NPCF contributions, for all combination of
     // bins.
    public:
-    STimer AddTimer3, ExclTimer3;
 
 // Array to hold the 3PCF
-#define N3PCF (NBIN * (NBIN + 1) / 2)  // only compute bin1 <= bin2
+#define N3PCF (NBIN_SHORT * (NBIN_SHORT + 1) / 2)  // only compute bin1 <= bin2
     Float threepcf[N3PCF];
 
-    STimer AddTimer4, ExclTimer4_doubleside, ExclTimer4_tripleside, ExclTimer4_triangle;
-
 // Sizes of 4pcf array
-#define N4PCF NBIN_LONG* NBIN*(NBIN + 1) / 2
+#define N4PCF NBIN_LONG* NBIN_SHORT*(NBIN_SHORT + 1) / 2
 
     // Array to hold the 4PCF
     Float fourpcf[N4PCF];
@@ -25,7 +22,7 @@ class NPCF {
 
     int fourpcf_bins[3][N4PCF]; // 4PCF index to 3 bin numbers mapping
 
-    int fourpcf_bin_number[NBIN_LONG][NBIN][NBIN]; // 3 bin numbers to 4PCF index mapping, uses -1 when bin is illegal
+    int fourpcf_bin_number[NBIN_LONG][NBIN_SHORT][NBIN_SHORT]; // 3 bin numbers to 4PCF index mapping, uses -1 when bin is illegal
 
     void reset() {
         // Zero out the array on construction.
@@ -40,16 +37,16 @@ class NPCF {
         return;
     }
 
-    void calc_4pcf_indices(Float rmin, Float rmax, Float rmin_long, Float rmax_long) {
+    void calc_4pcf_indices(Float rmin_short, Float rmax_short, Float rmin_long, Float rmax_long) {
         // Set up index mapping
         // Check the triangle condition if needed
         double eps = 1e-6; // some small tolerance for checking the condition
         for (int i = 0; i < NBIN_LONG; i++) {
             Float ri_min = rmin_long + i*(rmax_long-rmin_long)/NBIN_LONG; // minimal long radius in i'th bin
-            for (int j = 0; j < NBIN; j++) {
-                Float rj_max = rmin + (j+1)*(rmax-rmin)/NBIN; // maximal radius in j'th bin
-                for (int k = j; k < NBIN; k++) { // enough to do k>=j
-                    Float rk_max = rmin + (k+1)*(rmax-rmin)/NBIN; // maximal radius in k'th bin
+            for (int j = 0; j < NBIN_SHORT; j++) {
+                Float rj_max = rmin_short + (j+1)*(rmax_short-rmin_short)/NBIN_SHORT; // maximal radius in j'th bin
+                for (int k = j; k < NBIN_SHORT; k++) { // enough to do k>=j
+                    Float rk_max = rmin_short + (k+1)*(rmax_short-rmin_short)/NBIN_SHORT; // maximal radius in k'th bin
                     if (PREVENT_TRIANGLES && (rj_max + rk_max > ri_min + eps)) { // triangle is possible and we prevent it
                         fourpcf_bin_number[i][j][k] = fourpcf_bin_number[i][k][j] = -1; // bin is illegal, set that symmetrically
                     }
@@ -63,7 +60,11 @@ class NPCF {
                 }
             }
         }
+        #if (PREVENT_TRIANGLES)
         assert(N4PCF_used <= N4PCF);
+        #else
+        assert(N4PCF_used == N4PCF);
+        #endif
     }
 
     NPCF() {
@@ -82,22 +83,9 @@ class NPCF {
             fourpcf[x] += c->fourpcf[x];
     }
 
-    void report_timings() {
-        /// Report the NPCF timing measurements (for a single CPU).
-
-        printf("\n# Single CPU Timings");
-        printf("\n3PCF self-counts exclusion: %.3f s", ExclTimer3.Elapsed());
-        printf("\n3PCF addition: %.3f s", AddTimer3.Elapsed());
-        printf("\n4PCF triangle self-counts exclusion: %.3f s", ExclTimer4_triangle.Elapsed());
-        printf("\n4PCF double-side self-counts exclusion: %.3f s", ExclTimer4_doubleside.Elapsed());
-        printf("\n4PCF triple-side self-counts exclusion: %.3f s", ExclTimer4_tripleside.Elapsed());
-        printf("\n4PCF addition: %.3f s", AddTimer4.Elapsed());
-        printf("\n");
-    }
-
     void save_power(char* out_string,
-                    Float rmin,
-                    Float rmax,
+                    Float rmin_short,
+                    Float rmax_short,
                     Float rmin_long,
                     Float rmax_long,
                     Float sumw) {
@@ -111,23 +99,23 @@ class NPCF {
         FILE* OutFile = fopen(out_name, "w");
 
         // Print some useful information
-        fprintf(OutFile, "## Bins: %d\n", NBIN);
-        fprintf(OutFile, "## Minimum Radius = %.2e\n", rmin);
-        fprintf(OutFile, "## Maximum Radius = %.2e\n", rmax);
+        fprintf(OutFile, "## Bins: %d\n", NBIN_SHORT);
+        fprintf(OutFile, "## Minimum Radius = %.2e\n", rmin_short);
+        fprintf(OutFile, "## Maximum Radius = %.2e\n", rmax_short);
         fprintf(OutFile,
                 "## Format: Row 1 = radial bin 1, Row 2 = radial bin 2, Row "
                 "3 = zeta_ell^ab\n");
 
         // First print the indices of the first radial bin
-        for (int i = 0; i < NBIN; i++) {
-            for (int j = i; j < NBIN; j++)
+        for (int i = 0; i < NBIN_SHORT; i++) {
+            for (int j = i; j < NBIN_SHORT; j++)
                 fprintf(OutFile, "%2d\t", i);
         }
         fprintf(OutFile, " \n");
 
         // Print the indices of the second radial bin
-        for (int i = 0; i < NBIN; i++) {
-            for (int j = i; j < NBIN; j++)
+        for (int i = 0; i < NBIN_SHORT; i++) {
+            for (int j = i; j < NBIN_SHORT; j++)
                 fprintf(OutFile, "%2d\t", j);
         }
         fprintf(OutFile, "\n");
@@ -156,33 +144,34 @@ class NPCF {
             FILE* OutFile2 = fopen(out_name2, "w");
 
             // Print some useful information
-            fprintf(OutFile2, "## Bins: %d\n", NBIN);
-            fprintf(OutFile2, "## Minimum Radius = %.2e\n", rmin);
-            fprintf(OutFile2, "## Maximum Radius = %.2e\n", rmax);
+            fprintf(OutFile2, "## Short side bins: %d\n", NBIN_SHORT);
+            fprintf(OutFile2, "## Long side bins: %d\n", NBIN_LONG);
+            fprintf(OutFile2, "## Minimum Radius for short side = %.2e\n", rmin_short);
+            fprintf(OutFile2, "## Maximum Radius for short side = %.2e\n", rmax_short);
             fprintf(OutFile2, "## Minimum Radius for long side = %.2e\n",
                     rmin_long);
             fprintf(OutFile2, "## Maximum Radius for long side = %.2e\n",
                     rmax_long);
             fprintf(OutFile2,
-                    "## Format: Row 1 = radial bin 1 (long side), Row 2 = radial bin 2, "
-                    "Row 3 = radial bin 3, Row 4 = zeta_l1l2l3^abc\n");
+                    "## Format: Row 1 = radial bin 1 (long side), Row 2 = radial bin 2 (short side), "
+                    "Row 3 = radial bin 3 (short side), Row 4 = zeta_l1l2l3^abc\n");
 
             // First print the indices of the radial bins
-            for (int i = 0; i < N4PCF; i++)
+            for (int i = 0; i < N4PCF_used; i++)
                 fprintf(OutFile2, "%2d\t", fourpcf_bins[0][i]);
             fprintf(OutFile2, "\n");
 
-            for (int i = 0; i < N4PCF; i++)
+            for (int i = 0; i < N4PCF_used; i++)
                 fprintf(OutFile2, "%2d\t", fourpcf_bins[1][i]);
             fprintf(OutFile2, "\n");
 
-            for (int i = 0; i < N4PCF; i++)
+            for (int i = 0; i < N4PCF_used; i++)
                 fprintf(OutFile2, "%2d\t", fourpcf_bins[2][i]);
             fprintf(OutFile2, "\n");
 
             // Now print the 4PCF.
             Float norm = pow(sumw, -4); // normalize by sum of (positive) weights to the 4th power
-            for (int i = 0; i < N4PCF; i++)
+            for (int i = 0; i < N4PCF_used; i++)
                 fprintf(OutFile2, "%le\t", fourpcf[i]*norm);
             fprintf(OutFile2, "\n");
             fflush(NULL);
@@ -195,19 +184,16 @@ class NPCF {
     }
 
     inline int getbin_pair(int i, int j) { // needs i <= j
-        return j + NBIN*i - i * (i-1) / 2;
+        return j + NBIN_SHORT*i - i * (i-1) / 2;
     }
 
     inline void excl_3pcf(int bin, Float wprod) {
         // wprod is product of weights
 
         // delete 3PCF self-count
-        ExclTimer3.Start();
 
         int index = getbin_pair(bin, bin);
         threepcf[index] -= wprod;
-
-        ExclTimer3.Stop();
 
         return;
     }
@@ -216,15 +202,12 @@ class NPCF {
         // wp is the primary galaxy weight
 
         // COMPUTE 3PCF CONTRIBUTIONS
-        AddTimer3.Start();
 
-        for (int i = 0, ct = 0; i < NBIN; i++) {
-            for (int j = i; j < NBIN; j++, ct++) {
+        for (int i = 0, ct = 0; i < NBIN_SHORT; i++) {
+            for (int j = i; j < NBIN_SHORT; j++, ct++) {
                 threepcf[ct] = pairs->xi0[i] * pairs->xi0[j] / wp;
             }
         }
-
-        AddTimer3.Stop();
 
         return;
     }
@@ -233,12 +216,8 @@ class NPCF {
     inline void excl_4pcf_triangle(int bin_long, int bin, int bin2, Float wprod) {
         // COMPUTE 4PCF CONTRIBUTIONS
 
-        ExclTimer4_triangle.Start();
-
         if (bin <= bin2)
             fourpcf[fourpcf_bin_number[bin_long][bin][bin2]] -= wprod;
-
-        ExclTimer4_triangle.Stop();
 
         return;
     }
@@ -246,15 +225,12 @@ class NPCF {
     inline void excl_4pcf_doubleside(Pairs* pair, int bin_long, int bin, Float wprod) {
         // COMPUTE 4PCF CONTRIBUTIONS
 
-        ExclTimer4_doubleside.Start();
-
         // Iterate over second bin
         for (int bin2 = 0; bin2 <= bin; bin2++)
             fourpcf[fourpcf_bin_number[bin_long][bin][bin2]] -= pair->xi0[bin2] * wprod;
-        for (int bin2 = bin; bin2 < NBIN; bin2++) // go over bin=bin2 second time for consistency
+        for (int bin2 = bin; bin2 < NBIN_SHORT; bin2++) // go over bin=bin2 second time for consistency
             fourpcf[fourpcf_bin_number[bin_long][bin][bin2]] -= pair->xi0[bin2] * wprod;
         // End of radial binning loops
-        ExclTimer4_doubleside.Stop();
 
         return;
     }
@@ -262,11 +238,7 @@ class NPCF {
     inline void excl_4pcf_tripleside(int bin_long, int bin, Float wprod) {
         // COMPUTE 4PCF CONTRIBUTIONS
 
-        ExclTimer4_tripleside.Start();
-
         fourpcf[fourpcf_bin_number[bin_long][bin][bin]] += wprod * wprod;
-        
-        ExclTimer4_tripleside.Stop();
 
         return;
     }
@@ -275,19 +247,18 @@ class NPCF {
     inline void add_4pcf(Pairs* pair1, Pairs* pair2, int bin_long) {
         // COMPUTE 4PCF CONTRIBUTIONS
 
-        AddTimer4.Start();
-
         // Iterate over second bin
-        for (int j = 0; j < NBIN; j++) {
+        for (int j = 0; j < NBIN_SHORT; j++) {
             // Iterate over final bin and advance the 4PCF array counter
-            for (int k = j; k < NBIN; k++) {
+            for (int k = j; k < NBIN_SHORT; k++) {
                 int bin_number = fourpcf_bin_number[bin_long][j][k];
-                if (bin_number < 0) continue; // skip illegal bin
+                #if (PREVENT_TRIANGLES)
+                if (bin_number < 0) break; // skip illegal bin, then all next ones are illegal too. No illegal bins if no triangle prevention.
+                #endif
                 fourpcf[bin_number] += pair1->xi0[j] * pair2->xi0[k] + pair1->xi0[k] * pair2->xi0[j];
             }
         }
         // End of radial binning loops
-        AddTimer4.Stop();
 
         return;
     }

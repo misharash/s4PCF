@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
             orig_p = read_particles(par.rescale, &par.np, filename, par.rstart, par.nmax);
             assert(par.np>0);
 
-            par.perbox = compute_bounding_box(orig_p, par.np, par.rect_boxsize, par.cellsize, par.rmax, shift, par.nside);
+            par.perbox = compute_bounding_box(orig_p, par.np, par.rect_boxsize, par.cellsize, fmax(par.rmax_short, par.rmax_long), shift, par.nside);
         } else {
         // If you want to just make random particles instead:
         assert(par.np>0);
@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
         printf("Average number of particles per max_radius ball = %6.2f\n",
-                par.np*4.0*M_PI/3.0*pow(par.rmax,3.0)/(par.rect_boxsize.x*par.rect_boxsize.y*par.rect_boxsize.z));
+                par.np*4.0*M_PI/3.0*pow(par.rmax_short,3.0)/(par.rect_boxsize.x*par.rect_boxsize.y*par.rect_boxsize.z));
         if (grid_density<2){
             printf("#\n# WARNING: grid appears inefficiently fine; exiting.\n#\n");
             exit(1);
@@ -137,13 +137,13 @@ int main(int argc, char *argv[]) {
     CorrelationFunction all_cf[max_no_functions];
     RandomDraws all_rd[max_no_functions];
 
-    CorrelationFunction tmp_cf(par.corname,par.mbin_cf,par.mumax-par.mumin);
+    CorrelationFunction tmp_cf(par.corname, par.nbin_cf, par.radial_bins_low_cf, par.radial_bins_high_cf, par.mbin_cf, par.mumax-par.mumin);
     all_cf[0].copy_function(&tmp_cf);
     RandomDraws tmp_rd(&tmp_cf,&par,NULL,0);
     all_rd[0].copy(&tmp_rd);
 
     if(par.multi_tracers==true){
-        CorrelationFunction tmp_cf12(par.corname12,par.mbin_cf,par.mumax-par.mumin), tmp_cf2(par.corname2,par.mbin_cf,par.mumax-par.mumin);
+        CorrelationFunction tmp_cf12(par.corname12, par.nbin_cf, par.radial_bins_low_cf, par.radial_bins_high_cf, par.mbin_cf, par.mumax-par.mumin), tmp_cf2(par.corname2, par.nbin_cf, par.radial_bins_low_cf, par.radial_bins_high_cf, par.mbin_cf, par.mumax-par.mumin);
         all_cf[1].copy_function(&tmp_cf2);
         all_cf[2].copy_function(&tmp_cf12);
         RandomDraws rd2(&tmp_cf2,&par,NULL,0), rd12(&tmp_cf12,&par,NULL,0);

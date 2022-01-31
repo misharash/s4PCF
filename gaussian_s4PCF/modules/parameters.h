@@ -16,12 +16,12 @@ public:
 	const char default_fname[500] = "qpm_randoms_10x.xyzwj";
 
     // Name of the radial binning .csv file
-    char *radial_bin_file = NULL;
-    const char default_radial_bin_file[500] = "radial_binning_cov.csv";
+    char *radial_bin_file_short = NULL;
+    const char default_radial_bin_file_short[500] = "radial_binning_short.csv";
 
     // The name of the correlation function file for the first set of particles
 	char *corname = NULL;
-	const char default_corname[500] = "xi_x50/avg_50/xi_n900_m10_11.dat";
+	const char default_corname[500] = "../out50_longer/qpm_galaxies.zeta_fine2pcf.txt";
 
     // Name of the correlation function radial binning .csv file
     char *radial_bin_file_long = NULL;
@@ -36,13 +36,13 @@ public:
 
     // Output directory
     char *out_file = NULL;
-    const char default_out_file[500] = "./out_xi_x50_newbins";
+    const char default_out_file[500] = "./out1_longer";
 
     // The number of mu bins in the correlation function
     int mbin_cf = 10;
 
     // The number of threads to run on
-	int nthread = 20;
+	int nthread = 40;
 
     // The grid size, which should be tuned to match boxsize and rmax.
 	// This uses the maximum width of the cuboidal box.
@@ -59,7 +59,7 @@ public:
     //---------- PRECISION PARAMETERS ---------------------------------------
 
     // Maximum number of iterations to compute the C_ab integrals over
-    int max_loops = 60;
+    int max_loops = 80;
 
     // Number of random cells to draw at each stage
     int N2 = 20; // number of j cells per i cell
@@ -86,7 +86,7 @@ public:
 
     // Whether to exclude bins that can allow triangles (k=l), r_ij<=r_ik+r_jl
     // For consistency with s4PCF
-    bool prevent_triangles = true;
+    bool prevent_triangles = false;
 
 	// The minimum mu of the smallest bin.
 	Float mumin = 0.0;
@@ -135,10 +135,10 @@ public:
     Float cellsize;
 
     // Radial binning parameters (will be set from file)
-    int nbin=0, nbin_long=0, nbin_cf=0;
-    Float rmin, rmax, rmin_long, rmax_long, rmin_cf,rmax_cf;
-    Float * radial_bins_low, * radial_bins_low_long, * radial_bins_low_cf;
-    Float * radial_bins_high, * radial_bins_high_long, * radial_bins_high_cf;
+    int nbin_short=0, nbin_long=0, nbin_cf=0;
+    Float rmin_short, rmax_short, rmin_long, rmax_long, rmin_cf,rmax_cf;
+    Float * radial_bins_low_short, * radial_bins_low_long, * radial_bins_low_cf;
+    Float * radial_bins_high_short, * radial_bins_high_long, * radial_bins_high_cf;
 
     // Variable to decide if we are using multiple tracers:
     bool multi_tracers;
@@ -177,7 +177,7 @@ public:
 		else if (!strcmp(argv[i],"-balance")) qbalance = 1;
 		else if (!strcmp(argv[i],"-invert")) qinvert = 1;
         else if (!strcmp(argv[i],"-output")) out_file = argv[++i];
-        else if (!strcmp(argv[i],"-binfile")) radial_bin_file=argv[++i];
+        else if (!strcmp(argv[i],"-binfile_short")) radial_bin_file_short=argv[++i];
         else if (!strcmp(argv[i],"-binfile_long")) radial_bin_file_long=argv[++i];
         else if (!strcmp(argv[i],"-binfile_cf")) radial_bin_file_cf=argv[++i];
         else if (!strcmp(argv[i],"-N2")) N2=atof(argv[++i]);
@@ -225,7 +225,7 @@ public:
         if (rescale<=0.0) rescale = box_max;   // This would allow a unit cube to fill the periodic volume
 	    if (corname==NULL) { corname = (char *) default_corname; }// No name was given
 	    if (out_file==NULL) out_file = (char *) default_out_file; // no output savefile
-	    if (radial_bin_file==NULL) {radial_bin_file = (char *) default_radial_bin_file;} // No radial binning
+	    if (radial_bin_file_short==NULL) {radial_bin_file_short = (char *) default_radial_bin_file_short;} // No radial binning
 	    if (radial_bin_file_long==NULL) {radial_bin_file_long = (char *) default_radial_bin_file_long;} // No radial binning
 	    if (radial_bin_file_cf==NULL) {radial_bin_file_cf = (char *) default_radial_bin_file_cf;} // No radial binning
 
@@ -267,8 +267,8 @@ public:
 	    create_directory();
 
 	    // Read in the radial binning
-	    read_radial_binning(radial_bin_file, radial_bins_low, radial_bins_high, rmin, rmax, nbin);
-        printf("Read in %d radial bins in range (%.0f, %.0f) successfully.\n",nbin,rmin,rmax);
+	    read_radial_binning(radial_bin_file_short, radial_bins_low_short, radial_bins_high_short, rmin_short, rmax_short, nbin_short);
+        printf("Read in %d radial bins in range (%.0f, %.0f) successfully.\n", nbin_short, rmin_short, rmax_short);
 
 	    // Read in the radial binning for long side
         read_radial_binning(radial_bin_file_long, radial_bins_low_long, radial_bins_high_long, rmin_long, rmax_long, nbin_long);
@@ -279,8 +279,8 @@ public:
         printf("Read in %d radial bins in range (%.0f, %.0f) successfully.\n",nbin_cf,rmin_cf,rmax_cf);
 
 	    assert(box_min>0.0);
-	    assert(rmax>0.0);
-	    assert(rmax_long>0.0);
+	    assert(rmax_short>=0.0);
+	    assert(rmax_long>=0.0);
 	    assert(nside>0);
 
 #ifdef OPENMP
@@ -292,12 +292,12 @@ public:
 		// Output for posterity
 		printf("Box Size = {%6.5e,%6.5e,%6.5e}\n", rect_boxsize.x,rect_boxsize.y,rect_boxsize.z);
 		printf("Grid = %d\n", nside);
-		printf("Maximum Radius = %6.5e\n", rmax);
-		Float gridsize = rmax/(box_max/nside);
+		printf("Maximum Radius = %6.5e\n", rmax_short);
+		Float gridsize = rmax_short/(box_max/nside);
 		printf("Max Radius in Grid Units = %6.5e\n", gridsize);
 		if (gridsize<1) printf("#\n# WARNING: grid appears inefficiently coarse\n#\n");
-        printf("Radial Bins = %d\n", nbin);
-		printf("Radial Binning = {%6.5f, %6.5f} over %d bins (user-defined bin widths) \n",rmin,rmax,nbin);
+        printf("Short Radial Bins = %d\n", nbin_short);
+		printf("Short Radial Binning = {%6.5f, %6.5f} over %d bins (user-defined bin widths) \n", rmin_short, rmax_short, nbin_short);
 		printf("Maximum Long Radius = %6.5e\n", rmax_long);
 		gridsize = rmax_long/(box_max/nside);
 		printf("Max Long Radius in Grid Units = %6.5e\n", gridsize);
@@ -318,7 +318,7 @@ private:
 	    fprintf(stderr, "\nUsage for grid_covariance:\n\n");
         fprintf(stderr, "   -def: This allows one to accept the defaults without giving other entries.\n");
 	    fprintf(stderr, "   -in <file>: The input random particle file for particle-set 1 (space-separated x,y,z,w).\n");
-        fprintf(stderr, "   -binfile <filename>: File containing the desired radial bins\n");
+        fprintf(stderr, "   -binfile_short <filename>: File containing the desired radial bins for the short sides\n");
         fprintf(stderr, "   -binfile_long <filename>: File containing the desired radial bins for the long side\n");
         fprintf(stderr, "   -cor <file>: File location of input xi_1 correlation function file.\n");
 	    fprintf(stderr, "   -binfile_cf <filename>: File containing the desired radial bins for the correlation function.\n");

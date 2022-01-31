@@ -20,10 +20,12 @@ import numpy as np
 
 # Main inputs
 periodic = 0 # whether to run with periodic boundary conditions (should also be set in Makefile)
-rmin = 0 # minimum radius in Mpc/h
-rmax = 30 # maximum radius in Mpc/h
-rmin_long = 30 # minimum long side radius in Mpc/h
-rmax_long = 120 # maximum long side radius in Mpc/h
+rmin_short = 0 # minimum radius in Mpc/h
+rmax_short = 30 # maximum radius in Mpc/h
+rmin_long = 60 # minimum long side radius in Mpc/h
+rmax_long = 240 # maximum long side radius in Mpc/h
+rmin_cf = 0 # minimum fine 2PCF radius in Mpc/h
+rmax_cf = 300 # maximum fine 2PCF radius in Mpc/h
 
 # Other inputs
 scale = 1 # rescaling for co-ordinates
@@ -36,7 +38,7 @@ randomfilename = "qpm_randoms_50x.xyzwj" # random filename
 outroot = "qpm_galaxies" # base name for outputs
 workdir = os.getcwd()
 indir = os.path.join(workdir, "gaussian_s4PCF") # input directory (see above for required contents)
-outdir = os.path.join(workdir, "out1_newbins") # output file directory
+outdir = os.path.join(workdir, "out1_longer") # output file directory
 tmpdir = os.path.join(workdir, "tmp") # temporary directory for intermediate file storage for this run (ideally somewhere with fast I/O)
 scriptname = "run_npcf.py"
 
@@ -45,13 +47,13 @@ do_full = 1 # whether do full computation or only combine existing intermediate 
 ##########################################################
 
 # Set OpenMP number of threads
-OMP_NUM_THREADS = 20
+OMP_NUM_THREADS = 40
 os.environ["OMP_NUM_THREADS"] = str(OMP_NUM_THREADS)
 
 # Define command to run the C++ code
 code = "./s4PCF"
 
-command = f"{code} -rmax {rmax} -rmin {rmin} -rmax_long {rmax_long} -rmin_long {rmin_long} -ngrid {ngrid} -scale {scale}"
+command = f"{code} -rmax_short {rmax_short} -rmin_short {rmin_short} -rmax_long {rmax_long} -rmin_long {rmin_long} -rmax_cf {rmax_cf} -rmin_cf {rmin_cf} -ngrid {ngrid} -scale {scale}"
 if periodic:
     command += f" -boxsize {boxsize}"
 
@@ -105,11 +107,11 @@ if do_full:
     random_parts_indices = [random_indices[i::Nparts] for i in range(Nparts)]
     print("Created random indices")
     # now read contents
-    print_and_log("Reading random file")
+    print_and_log(f"Reading random file {randomfilename}")
     print_and_log(datetime.now())
     random_contents = np.loadtxt(os.path.join(indir, randomfilename), usecols=range(4))
     # use only X, Y, Z coords and weights (4 first columns), consistently with data reading
-    print_and_log("Read random file")
+    print_and_log(f"Read random file {randomfilename}")
     random_contents[:, 3] *= -1 # negate the weights
 
 # First do R^N
@@ -125,7 +127,7 @@ for i in range(Nparts*do_full): # skip if do_full is false
     # run code, forward output to separate file
     os.system(f"{command} -in {filename} -outstr {outstr} -invert >> {os.path.join(tmpdir, outstr)}.out")
     os.remove(filename) # clean up
-    os.system(f"mv output/{outstr}_?pc*.txt {os.path.normpath(tmpdir)}/") # move output into the temporary dir
+    os.system(f"mv output/{outstr}_*pc*.txt {os.path.normpath(tmpdir)}/") # move output into the temporary dir
     print_and_log(f"Done with R[{i}]^N")
 # end for each random part
 
@@ -149,7 +151,7 @@ for j, datafilename in enumerate(datafilenames*do_full): # skip if do_full is fa
         # run code, forward output to separate file
         os.system(f"{command} -in {filename} -outstr {outstr} -balance >> {os.path.join(tmpdir, outstr)}.out")
         os.remove(filename) # clean up
-        os.system(f"mv output/{outstr}_?pc*.txt {os.path.normpath(tmpdir)}/") # move output into the temporary dir
+        os.system(f"mv output/{outstr}_*pc*.txt {os.path.normpath(tmpdir)}/") # move output into the temporary dir
         print_and_log(f"Done with (D[{j}]-R[{i}])^N")
     # end for each random part
 # end for each data file
