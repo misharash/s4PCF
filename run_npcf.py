@@ -22,10 +22,10 @@ import numpy as np
 periodic = 0 # whether to run with periodic boundary conditions (should also be set in Makefile)
 rmin_short = 0 # minimum radius in Mpc/h
 rmax_short = 30 # maximum radius in Mpc/h
-rmin_long = 30 # minimum long side radius in Mpc/h
-rmax_long = 120 # maximum long side radius in Mpc/h
+rmin_long = 60 # minimum long side radius in Mpc/h
+rmax_long = 240 # maximum long side radius in Mpc/h
 rmin_cf = 0 # minimum fine 2PCF radius in Mpc/h
-rmax_cf = 180 # maximum fine 2PCF radius in Mpc/h
+rmax_cf = 300 # maximum fine 2PCF radius in Mpc/h
 
 # Other inputs
 scale = 1 # rescaling for co-ordinates
@@ -34,11 +34,11 @@ boxsize = 1000 # only used if periodic=1
 
 # File names and directories
 datafilenames = [f"qpm_galaxies/{i+1:04d}.xyz" for i in range(50)] # data filenames
-randomfilename = "qpm_randoms_50x.xyzwj" # random filename
+randomfilename = "qpm_randoms_10x.xyzwj" # random filename
 outroot = "qpm_galaxies" # base name for outputs
 workdir = os.getcwd()
 indir = os.path.join(workdir, "gaussian_s4PCF") # input directory (see above for required contents)
-outdir = os.path.join(workdir, "out") # output file directory
+outdir = os.path.join(workdir, "out50_longer") # output file directory
 tmpdir = os.path.join(workdir, "tmp") # temporary directory for intermediate file storage for this run (ideally somewhere with fast I/O)
 scriptname = "run_npcf.py"
 
@@ -47,7 +47,7 @@ do_full = 1 # whether do full computation or only combine existing intermediate 
 ##########################################################
 
 # Set OpenMP number of threads
-OMP_NUM_THREADS = 30
+OMP_NUM_THREADS = 40
 os.environ["OMP_NUM_THREADS"] = str(OMP_NUM_THREADS)
 
 # Define command to run the C++ code

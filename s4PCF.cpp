@@ -17,9 +17,9 @@
 #endif
 
 // NBIN is the number of bins we'll sort the radii into.
-#define NBIN_SHORT 15 // short sides
-#define NBIN_LONG 18 // long side
-#define NBIN_CF 450 // fine, anisotropic 2-point correlation function
+#define NBIN_SHORT 10 // short sides
+#define NBIN_LONG 30 // long side
+#define NBIN_CF 500 // fine, anisotropic 2-point correlation function
 // MBIN is number of bins for mu
 #define MBIN_CF 10 // fine, anisotropic 2-point correlation function
 
@@ -120,14 +120,14 @@ void usage() {
             "side bin.  Default 30.\n");
     fprintf(stderr,
             "   -rmin_long <rmin_long>: The minimum radius of the long "
-            "side bin.  Default 30.\n");
+            "side bin.  Default 60.\n");
     fprintf(stderr,
             "   -rmax_long <rmax_long>: The maximum radius of the long "
-            "side bin.  Default 120.\n");
+            "side bin.  Default 240.\n");
     fprintf(stderr,
             "   -rmin_cf <rmin_cf>: The minimum radius of the fine, anisotropic 2PCF bin.  Default 0.\n");
     fprintf(stderr,
-            "   -rmax_cf <rmax_cf>: The maximum radius of the fine, anisotropic 2PCF bin.  Default 180.\n");
+            "   -rmax_cf <rmax_cf>: The maximum radius of the fine, anisotropic 2PCF bin.  Default 300.\n");
     fprintf(stderr, "\n");
     fprintf(stderr,
             "   -ran <np>: Ignore any file and use np random perioidic "
@@ -177,11 +177,11 @@ int main(int argc, char* argv[]) {
     // The maximum radius of the largest bin.
     Float rmin_short = 0;
     // The minimum radius of the smallest bin.
-    Float rmax_long = 120;
+    Float rmax_long = 240;
     // The maximum radius of the long side bin.
-    Float rmin_long = 30;
+    Float rmin_long = 60;
     // The minimum radius of the long side bin.
-    Float rmax_cf = 180;
+    Float rmax_cf = 300;
     // The maximum radius of fine 2pcf bin.
     Float rmin_cf = 0;
     // The minimum radius of fine 2pcf bin.

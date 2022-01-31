@@ -21,7 +21,7 @@ public:
 
     // The name of the correlation function file for the first set of particles
 	char *corname = NULL;
-	const char default_corname[500] = "xi_x50/avg_50/xi_n900_m10_11.dat";
+	const char default_corname[500] = "../out50_longer/qpm_galaxies.zeta_fine2pcf.txt";
 
     // Name of the correlation function radial binning .csv file
     char *radial_bin_file_long = NULL;
@@ -36,13 +36,13 @@ public:
 
     // Output directory
     char *out_file = NULL;
-    const char default_out_file[500] = "./out_xi_x50_n900_m10";
+    const char default_out_file[500] = "./out50_longer";
 
     // The number of mu bins in the correlation function
     int mbin_cf = 10;
 
     // The number of threads to run on
-	int nthread = 30;
+	int nthread = 40;
 
     // The grid size, which should be tuned to match boxsize and rmax.
 	// This uses the maximum width of the cuboidal box.
@@ -59,7 +59,7 @@ public:
     //---------- PRECISION PARAMETERS ---------------------------------------
 
     // Maximum number of iterations to compute the C_ab integrals over
-    int max_loops = 90;
+    int max_loops = 80;
 
     // Number of random cells to draw at each stage
     int N2 = 20; // number of j cells per i cell

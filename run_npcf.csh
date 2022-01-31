@@ -34,9 +34,9 @@ set periodic = 0 # whether to run with periodic boundary conditions (should also
 set rmin_short = 0 # minimum short radius in Mpc/h
 set rmax_short = 30 # maximum short radius in Mpc/h
 set rmin_long = 60 # minimum long radius in Mpc/h
-set rmax_long = 120 # maximum long radius in Mpc/h
+set rmax_long = 240 # maximum long radius in Mpc/h
 set rmin_cf = 0 # minimum 2PCF radius in Mpc/h
-set rmax_cf = 180 # maximum 2PCF radius in Mpc/h
+set rmax_cf = 300 # maximum 2PCF radius in Mpc/h
 
 # Other inputs
 set scale = 1 # rescaling for co-ordinates
