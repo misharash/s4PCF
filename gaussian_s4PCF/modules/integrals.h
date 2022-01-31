@@ -127,9 +127,14 @@ public:
         // First define which r bin we are in;
         Float* r_higher_short = std::upper_bound(r_high_short, r_high_short + nbin_short, r); // binary search for r_high element higher than r
         int which_bin = r_higher_short - r_high_short; // bin index is pointer difference; will be nbin if value not found, i.e. if we are above top bin
-        if (which_bin < nbin_short) // safety check unless we are above top bin already
-            if (r < r_low_short[which_bin]) // r < r_high[which_bin] is guaranteed above so only need to check that r >= r_low[which_bin]
+        assert(&(r_high_short[which_bin]) == r_higher_short); // check that index is what we expect
+        if (which_bin < nbin_short) { // safety check unless we are above top bin already
+            assert(r < r_high_short[which_bin]);
+            if (r < r_low_short[which_bin]) { // r < r_high[which_bin] is guaranteed above so only need to check that r >= r_low[which_bin]
+                assert(which_bin == 0);
                 which_bin = -1; // if not then no bin fits the bill
+            }
+        }
         return which_bin*mbin + floor((mu-mumin)/dmu);
     }
 
@@ -150,9 +155,14 @@ public:
         // Define which r_long bin we are in;
         Float* r_higher_long = std::upper_bound(r_high_long, r_high_long + nbin_long, r); // binary search for r_high element higher than r
         int which_bin = r_higher_long - r_high_long; // bin index is pointer difference; will be nbin if value not found, i.e. if we are above top bin
-        if (which_bin < nbin_long) // safety check unless we are above top bin already
-            if (r < r_low_long[which_bin]) // r < r_high_long[which_bin] is guaranteed above so only need to check that r >= r_low_long[which_bin]
+        assert(&(r_high_long[which_bin]) == r_higher_long); // check that index is what we expect
+        if (which_bin < nbin_long) { // safety check unless we are above top bin already
+            assert(r < r_high_long[which_bin]);
+            if (r < r_low_long[which_bin]) { // r < r_high_long[which_bin] is guaranteed above so only need to check that r >= r_low_long[which_bin]
+                assert(which_bin == 0);
                 which_bin = -1; // if not then no bin fits the bill
+            }
+        }
         return which_bin*mbin + floor((mu-mumin)/dmu);
     }
 
