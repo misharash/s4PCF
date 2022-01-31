@@ -36,13 +36,13 @@ public:
 
     // Output directory
     char *out_file = NULL;
-    const char default_out_file[500] = "./out_xi_x50_n900_m10";
+    const char default_out_file[500] = "./out_test";
 
     // The number of mu bins in the correlation function
     int mbin_cf = 10;
 
     // The number of threads to run on
-	int nthread = 30;
+	int nthread = 4;
 
     // The grid size, which should be tuned to match boxsize and rmax.
 	// This uses the maximum width of the cuboidal box.
@@ -59,12 +59,12 @@ public:
     //---------- PRECISION PARAMETERS ---------------------------------------
 
     // Maximum number of iterations to compute the C_ab integrals over
-    int max_loops = 90;
+    int max_loops = 4;
 
     // Number of random cells to draw at each stage
-    int N2 = 20; // number of j cells per i cell
-    int N3 = 40; // number of k cells per j cell
-    int N4 = 80; // number of l cells per k cell
+    int N2 = 5; // number of j cells per i cell
+    int N3 = 10; // number of k cells per j cell
+    int N4 = 20; // number of l cells per k cell
 
     //------------------ GENERAL MULTI-FIELD PARAMETERS ----------------------
 
