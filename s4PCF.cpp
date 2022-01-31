@@ -17,7 +17,7 @@
 #endif
 
 // NBIN is the number of bins we'll sort the radii into.
-#define NBIN_SHORT 15 // short sides
+#define NBIN_SHORT 5 // short sides
 #define NBIN_LONG 18 // long side
 #define NBIN_CF 450 // fine, anisotropic 2-point correlation function
 // MBIN is number of bins for mu
