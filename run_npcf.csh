@@ -125,7 +125,7 @@ echo "Starting R^N" >> $errlog
 date >> $errlog
 ($command -in $tmp/$root.ran.00 -outstr $root.r -invert > $tmpout/$root.r.out) >>& $errlog
 # Copy the output into the temporary directory
-mv output/$root.r_?pc*.txt $tmpout/
+mv output/$root.r_*pc*.txt $tmpout/
 
 echo "Done with R^N"
 
@@ -149,7 +149,7 @@ foreach n ( 00 01 02 03 04 05 06 07 08 09 \
     # save & load not implemented yet so instead
     ($command -in $tmp/$root.ran.$n -outstr $root.n$n -balance > $tmpout/$root.n$n.out) >>& $errlog
     # Copy the output into the temporary directory
-    mv output/$root.n${n}_?pc*.txt $tmpout/
+    mv output/$root.n${n}_*pc*.txt $tmpout/
 
     # Remove the random catalog
     /bin/rm -f $tmp/$root.ran.$n

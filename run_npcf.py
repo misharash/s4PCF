@@ -107,11 +107,11 @@ if do_full:
     random_parts_indices = [random_indices[i::Nparts] for i in range(Nparts)]
     print("Created random indices")
     # now read contents
-    print_and_log("Reading random file")
+    print_and_log(f"Reading random file {randomfilename}")
     print_and_log(datetime.now())
     random_contents = np.loadtxt(os.path.join(indir, randomfilename), usecols=range(4))
     # use only X, Y, Z coords and weights (4 first columns), consistently with data reading
-    print_and_log("Read random file")
+    print_and_log(f"Read random file {randomfilename}")
     random_contents[:, 3] *= -1 # negate the weights
 
 # First do R^N
@@ -127,7 +127,7 @@ for i in range(Nparts*do_full): # skip if do_full is false
     # run code, forward output to separate file
     os.system(f"{command} -in {filename} -outstr {outstr} -invert >> {os.path.join(tmpdir, outstr)}.out")
     os.remove(filename) # clean up
-    os.system(f"mv output/{outstr}_?pc*.txt {os.path.normpath(tmpdir)}/") # move output into the temporary dir
+    os.system(f"mv output/{outstr}_*pc*.txt {os.path.normpath(tmpdir)}/") # move output into the temporary dir
     print_and_log(f"Done with R[{i}]^N")
 # end for each random part
 
@@ -151,7 +151,7 @@ for j, datafilename in enumerate(datafilenames*do_full): # skip if do_full is fa
         # run code, forward output to separate file
         os.system(f"{command} -in {filename} -outstr {outstr} -balance >> {os.path.join(tmpdir, outstr)}.out")
         os.remove(filename) # clean up
-        os.system(f"mv output/{outstr}_?pc*.txt {os.path.normpath(tmpdir)}/") # move output into the temporary dir
+        os.system(f"mv output/{outstr}_*pc*.txt {os.path.normpath(tmpdir)}/") # move output into the temporary dir
         print_and_log(f"Done with (D[{j}]-R[{i}])^N")
     # end for each random part
 # end for each data file
