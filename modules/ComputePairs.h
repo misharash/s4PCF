@@ -219,10 +219,6 @@ void compute_pairs(Grid* grid,
                                 // Now we're considering these two particles!
                                 if (samecell && j == k)
                                     continue;  // Exclude self-count
-                                if (mloaded && grid->p[k].w >= 0)
-                                    continue;
-                                // This particle has already been included in
-                                // the file we loaded.
                                 Float3 dx = grid->p[k].pos - ppos;
                                 Float norm2 = dx.norm2();
                                 // Check if this is in the correct binning

@@ -248,7 +248,9 @@ class NPCF {
             // Iterate over final bin and advance the 4PCF array counter
             for (int k = j; k < NBIN_SHORT; k++) {
                 int bin_number = fourpcf_bin_number[bin_long][j][k];
-                if (bin_number < 0) continue; // skip illegal bin
+                #if (PREVENT_TRIANGLES)
+                if (bin_number < 0) break; // skip illegal bin, then all next ones are illegal too. No illegal bins if no triangle prevention.
+                #endif
                 fourpcf[bin_number] += pair1->xi0[j] * pair2->xi0[k] + pair1->xi0[k] * pair2->xi0[j];
             }
         }
