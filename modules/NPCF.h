@@ -169,21 +169,21 @@ class NPCF {
                     "Row 3 = radial bin 3 (short side), Row 4 = zeta_l1l2l3^abc\n");
 
             // First print the indices of the radial bins
-            for (int i = 0; i < N4PCF; i++)
+            for (int i = 0; i < N4PCF_used; i++)
                 fprintf(OutFile2, "%2d\t", fourpcf_bins[0][i]);
             fprintf(OutFile2, "\n");
 
-            for (int i = 0; i < N4PCF; i++)
+            for (int i = 0; i < N4PCF_used; i++)
                 fprintf(OutFile2, "%2d\t", fourpcf_bins[1][i]);
             fprintf(OutFile2, "\n");
 
-            for (int i = 0; i < N4PCF; i++)
+            for (int i = 0; i < N4PCF_used; i++)
                 fprintf(OutFile2, "%2d\t", fourpcf_bins[2][i]);
             fprintf(OutFile2, "\n");
 
             // Now print the 4PCF.
             Float norm = pow(sumw, -4); // normalize by sum of (positive) weights to the 4th power
-            for (int i = 0; i < N4PCF; i++)
+            for (int i = 0; i < N4PCF_used; i++)
                 fprintf(OutFile2, "%le\t", fourpcf[i]*norm);
             fprintf(OutFile2, "\n");
             fflush(NULL);
