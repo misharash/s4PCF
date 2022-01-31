@@ -60,7 +60,11 @@ class NPCF {
                 }
             }
         }
+        #if (PREVENT_TRIANGLES)
         assert(N4PCF_used <= N4PCF);
+        #else
+        assert(N4PCF_used == N4PCF);
+        #endif
     }
 
     NPCF() {
