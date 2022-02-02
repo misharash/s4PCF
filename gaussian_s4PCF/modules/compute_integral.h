@@ -214,7 +214,7 @@ class compute_integral{
 
                 // End loops early if convergence has been acheived
                 if (convergence_counter==10){
-                    if (printtime==0) printf("1 percent convergence acheived in C4 10 times, exiting.\n");
+                    if (printtime==0) printf("0.01%% convergence achieved in every bin 10 times, exiting.\n");
                     printtime++;
                     continue;
                     }
@@ -298,12 +298,13 @@ class compute_integral{
                     fprintf(stderr,"\nFinished integral loop %d of %d after %d s. Estimated time left:  %2.2d:%2.2d:%2.2d hms, i.e. %d s.\n",n_loops+1,par->max_loops, current_runtime,remaining_time/3600,remaining_time/60%60, remaining_time%60,remaining_time);
 
                     TotalTime.Start(); // Restart the timer
-                    Float rmsrd_C4;
+                    Float rmsrd_C4, maxrd_C4;
 
-                    sumint.rms_rel_difference(&locint,n_loops, rmsrd_C4);
-                    if(rmsrd_C4<0.01) convergence_counter++;
+                    sumint.rel_difference(&locint,n_loops, rmsrd_C4, maxrd_C4);
+                    if(maxrd_C4<0.01) convergence_counter++;
                     if (n_loops!=0){
                         fprintf(stderr,"RMS relative difference after loop %d is %.3f%%\n",n_loops, rmsrd_C4);
+                        fprintf(stderr,"max relative difference after loop %d is %.3f%%\n",n_loops, maxrd_C4);
                     }
                 }
 
