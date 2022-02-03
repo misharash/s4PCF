@@ -300,11 +300,11 @@ class compute_integral{
                     TotalTime.Start(); // Restart the timer
                     Float rmsrd_C4, maxrd_C4;
 
-                    sumint.rel_difference(&locint,n_loops, rmsrd_C4, maxrd_C4);
-                    if(maxrd_C4<0.01) convergence_counter++;
-                    if (n_loops!=0){
-                        fprintf(stderr,"RMS relative difference after loop %d is %.3f%%\n",n_loops, rmsrd_C4);
-                        fprintf(stderr,"max relative difference after loop %d is %.3f%%\n",n_loops, maxrd_C4);
+                    sumint.rel_difference(&locint, n_loops, rmsrd_C4, maxrd_C4);
+                    if (maxrd_C4 < 1e-4) convergence_counter++;
+                    if (n_loops!=0) {
+                        fprintf(stderr, "RMS relative difference after loop %d is %.3f%%\n", n_loops, rmsrd_C4*100);
+                        fprintf(stderr, "max relative difference after loop %d is %.3f%%\n", n_loops, maxrd_C4*100);
                     }
                 }
 
