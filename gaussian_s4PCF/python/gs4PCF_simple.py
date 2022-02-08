@@ -101,11 +101,11 @@ def integrate_gs4PCF(ra_min, ra_max, rb_min, rb_max, rc_min, rc_max):
     return quad(inner_integrand, ra_min, ra_max, args=(rb_min, rb_max, rc_min, rc_max))[0]
 
 for i, (ra_min, ra_max) in enumerate(long_bins):
+    print(f"Started {i+1} of {len(long_bins)}")
     for j, (rb_min, rb_max) in enumerate(short_bins):
         for k, (rc_min, rc_max) in enumerate(short_bins[j:]):
-            print(f"Started {i, j, k}")
             gs4PCF[i, j, k] += integrate_gs4PCF(ra_min, ra_max, rb_min, rb_max, rc_min, rc_max)
             gs4PCF[i, k, j] = gs4PCF[i, j, k] # symmetry
-            print(f"Finished {i, j, k}")
+    print(f"Finished {i+1} of {len(long_bins)}")
 
 np.save(outfilename, gs4PCF)
