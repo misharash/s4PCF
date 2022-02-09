@@ -2,7 +2,7 @@ import sys
 import os
 from datetime import datetime
 import numpy as np
-from scipy.integrate import quad
+from scipy.integrate import romberg
 from scipy.interpolate import interp1d
 
 if len(sys.argv) == 6:
@@ -67,14 +67,14 @@ def inner_integrand(rij, rb_min, rb_max, rc_min, rc_max):
     #print(f"Started inner integrand computation, rij={rij}, rb={rb_min, rb_max}, rc={rc_min, rc_max}") # comnment out later
     # xi_jk xi_il part - easier
     # xi_jk
-    xi_jk_bavg = quad(lambda R: R*xi_fun(R)*(np.square(rb_max) - np.square(rij - R)), rij - rb_max, rij - rb_min)[0]
-    xi_jk_bavg += quad(lambda R: R*xi_fun(R)*(np.square(rb_max) - np.square(rb_min)), rij - rb_min, rij + rb_min)[0]
-    xi_jk_bavg += quad(lambda R: R*xi_fun(R)*(np.square(rb_max) - np.square(rij - R)), rij + rb_min, rij + rb_max)[0]
+    xi_jk_bavg = romberg(lambda R: R*xi_fun(R)*(np.square(rb_max) - np.square(rij - R)), rij - rb_max, rij - rb_min, vec_func=True)
+    xi_jk_bavg += romberg(lambda R: R*xi_fun(R)*(np.square(rb_max) - np.square(rb_min)), rij - rb_min, rij + rb_min, vec_func=True)
+    xi_jk_bavg += romberg(lambda R: R*xi_fun(R)*(np.square(rb_max) - np.square(rij - R)), rij + rb_min, rij + rb_max, vec_func=True)
     xi_jk_bavg *= 3 / (4 * rij * (pow(rb_max, 3) - pow(rb_min, 3))) # common factor
     # xi_il
-    xi_il_cavg = quad(lambda R: R*xi_fun(R)*(np.square(rc_max) - np.square(rij - R)), rij - rc_max, rij - rc_min)[0]
-    xi_il_cavg += quad(lambda R: R*xi_fun(R)*(np.square(rc_max) - np.square(rc_min)), rij - rc_min, rij + rc_min)[0]
-    xi_il_cavg += quad(lambda R: R*xi_fun(R)*(np.square(rc_max) - np.square(rij - R)), rij + rc_min, rij + rc_max)[0]
+    xi_il_cavg = romberg(lambda R: R*xi_fun(R)*(np.square(rc_max) - np.square(rij - R)), rij - rc_max, rij - rc_min, vec_func=True)
+    xi_il_cavg += romberg(lambda R: R*xi_fun(R)*(np.square(rc_max) - np.square(rc_min)), rij - rc_min, rij + rc_min, vec_func=True)
+    xi_il_cavg += romberg(lambda R: R*xi_fun(R)*(np.square(rc_max) - np.square(rij - R)), rij + rc_min, rij + rc_max, vec_func=True)
     xi_il_cavg *= 3 / (4 * rij * (pow(rc_max, 3) - pow(rc_min, 3))) # common factor
     # carry their product to final result
     value = xi_jk_bavg * xi_il_cavg
@@ -91,14 +91,14 @@ def inner_integrand(rij, rb_min, rb_max, rc_min, rc_max):
     xi_ik = xi_fun(rij)
     xi_kl_bcavg = 0
     for (a, b) in zip(points_of_interest[:-1], points_of_interest[1:]):
-        xi_kl_bcavg += quad(lambda R: R*xi_fun(R)*G(rij, R, rb_min, rb_max, rc_min, rc_max), a, b)[0]
+        xi_kl_bcavg += romberg(lambda R: R*xi_fun(R)*G(rij, R, rb_min, rb_max, rc_min, rc_max), a, b)
     xi_kl_bcavg *= 3 / (16 * rij * (pow(rb_max, 3) - pow(rb_min, 3)) * (pow(rc_max, 3) - pow(rc_min, 3))) # common factor
     value += xi_ik * xi_kl_bcavg
     #print(f"Finished 2 part of inner integrand computation, rij={rij}, rb={rb_min, rb_max}, rc={rc_min, rc_max}") # comnment out later
     return value
 
 def integrate_gs4PCF(ra_min, ra_max, rb_min, rb_max, rc_min, rc_max):
-    return quad(inner_integrand, ra_min, ra_max, args=(rb_min, rb_max, rc_min, rc_max))[0]
+    return romberg(inner_integrand, ra_min, ra_max, args=(rb_min, rb_max, rc_min, rc_max))
 
 for i, (ra_min, ra_max) in enumerate(long_bins):
     print(f"Started {i+1} of {len(long_bins)} ({datetime.now()})")
