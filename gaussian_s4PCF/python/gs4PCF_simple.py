@@ -25,6 +25,7 @@ if os.path.exists(xi_fine_file):
     r2xi_fun = interp1d(r_vals, r_vals**2 * xi_vals, kind='cubic', fill_value="extrapolate")
     xi_fun = lambda r: r2xi_fun(r) * np.fmax(r, rmin)**-2
 else:
+    r_vals = np.zeros(0)
     xi_fun = lambda r: np.fmax(r, rmin)**-2
 
 # read bins
@@ -72,14 +73,26 @@ def G(rij, R, rb_min, rb_max, rc_min, rc_max):
 def inner_integrand(rij, rb_min, rb_max, rc_min, rc_max):
     # xi_jk xi_il part - easier
     # xi_jk
-    xi_jk_bavg = integration_wrapper(lambda R: R*xi_fun(R)*(np.square(rb_max) - np.square(rij - R)), rij - rb_max, rij - rb_min, vec_func=True, precision_factor=2*rb_max/(rb_max-rb_min))
-    xi_jk_bavg += integration_wrapper(lambda R: R*xi_fun(R)*(np.square(rb_max) - np.square(rb_min)), rij - rb_min, rij + rb_min, vec_func=True, precision_factor=rb_max/rb_min)
-    xi_jk_bavg += integration_wrapper(lambda R: R*xi_fun(R)*(np.square(rb_max) - np.square(rij - R)), rij + rb_min, rij + rb_max, vec_func=True, precision_factor=2*rb_max/(rb_max-rb_min))
+    points_of_interest = np.array((rb_min, rb_max)) # throw r_bmin/max
+    points_of_interest = rij + np.append(-points_of_interest, points_of_interest) # throw minus the abovementioned, add r_ij to all
+    points_of_interest = np.append(points_of_interest, r_vals[np.logical_and(r_vals > min(points_of_interest), r_vals < max(points_of_interest))])
+    # throw interpolation grid points fitting in the range
+    points_of_interest = np.sort(np.unique(points_of_interest)) # delete repeating points and sort by ascension
+    interval_len = points_of_interest[-1] - points_of_interest[0]
+    xi_jk_bavg = 0
+    for (a, b) in zip(points_of_interest[:-1], points_of_interest[1:]):
+        xi_jk_bavg += integration_wrapper(lambda R: R*xi_fun(R)*(np.square(rb_max) - np.fmax(np.square(rij - R), np.square(rb_min))), a, b, vec_func=True, precision_factor=interval_len/(b-a))
     xi_jk_bavg *= 3 / (4 * rij * (pow(rb_max, 3) - pow(rb_min, 3))) # common factor
     # xi_il
-    xi_il_cavg = integration_wrapper(lambda R: R*xi_fun(R)*(np.square(rc_max) - np.square(rij - R)), rij - rc_max, rij - rc_min, vec_func=True, precision_factor=2*rc_max/(rc_max-rc_min))
-    xi_il_cavg += integration_wrapper(lambda R: R*xi_fun(R)*(np.square(rc_max) - np.square(rc_min)), rij - rc_min, rij + rc_min, vec_func=True, precision_factor=rc_max/rc_min)
-    xi_il_cavg += integration_wrapper(lambda R: R*xi_fun(R)*(np.square(rc_max) - np.square(rij - R)), rij + rc_min, rij + rc_max, vec_func=True, precision_factor=2*rc_max/(rc_max-rc_min))
+    points_of_interest = np.array((rc_min, rc_max)) # throw r_cmin/max
+    points_of_interest = rij + np.append(-points_of_interest, points_of_interest) # throw minus the abovementioned, add r_ij to all
+    points_of_interest = np.append(points_of_interest, r_vals[np.logical_and(r_vals > min(points_of_interest), r_vals < max(points_of_interest))])
+    # throw interpolation grid points fitting in the range
+    points_of_interest = np.sort(np.unique(points_of_interest)) # delete repeating points and sort by ascension
+    interval_len = points_of_interest[-1] - points_of_interest[0]
+    xi_il_cavg = 0
+    for (a, b) in zip(points_of_interest[:-1], points_of_interest[1:]):
+        xi_il_cavg += integration_wrapper(lambda R: R*xi_fun(R)*(np.square(rc_max) - np.fmax(np.square(rij - R), np.square(rc_min))), a, b, vec_func=True, precision_factor=interval_len/(b-a))
     xi_il_cavg *= 3 / (4 * rij * (pow(rc_max, 3) - pow(rc_min, 3))) # common factor
     # carry their product to final result
     value = xi_jk_bavg * xi_il_cavg
@@ -90,8 +103,11 @@ def inner_integrand(rij, rb_min, rb_max, rc_min, rc_max):
         for c2 in (rc_min, rc_max):
             for s1 in (-1, 1):
                 for s2 in (-1, 1):
-                    points_of_interest.append(s1 * c1 + s2 * c2)
-    points_of_interest = rij + np.sort(np.unique(points_of_interest)) # delete repeating points, sort and add rij
+                    points_of_interest.append(s1 * c1 + s2 * c2) # throw points +/- r_bmin/max +/- r_cmin/max
+    points_of_interest = rij + np.array(points_of_interest) # add r_ij to all above
+    points_of_interest = np.append(points_of_interest, r_vals[np.logical_and(r_vals > min(points_of_interest), r_vals < max(points_of_interest))])
+    # throw interpolation grid points fitting in the range
+    points_of_interest = np.sort(np.unique(points_of_interest)) # delete repeating points and sort by ascension
     interval_len = points_of_interest[-1] - points_of_interest[0]
     xi_ik = xi_fun(rij)
     xi_kl_bcavg = 0
@@ -103,7 +119,20 @@ def inner_integrand(rij, rb_min, rb_max, rc_min, rc_max):
     return value * np.square(rij) # r_ij^2 weighting for bin average
 
 def integrate_gs4PCF(ra_min, ra_max, rb_min, rb_max, rc_min, rc_max):
-    value = integration_wrapper(inner_integrand, ra_min, ra_max, args=(rb_min, rb_max, rc_min, rc_max))
+    interval_len = ra_max - ra_min
+    points_of_interest = np.array((ra_min, ra_max))
+    shifts = []
+    for c1 in (rb_max, rb_min):
+        for c2 in (rc_min, rc_max):
+            for s1 in (-1, 0, 1):
+                for s2 in (-1, 0, 1):
+                    shifts.append(s1 * c1 + s2 * c2) # throw points +/-/0x r_bmin/max +/-/0x r_cmin/max, some loops are extra
+    shifts = np.unique(shifts) # delete repetitions
+    shited_r_vals = np.unique(np.ravel(r_vals[:, None] + shifts[None, :])) # these are potential discontinuities in derivatives, flattened and unique
+    points_of_interest = np.sort(np.unique(np.append(points_of_interest, shited_r_vals[np.logical_and(shited_r_vals > ra_min, shited_r_vals < ra_max)]))) # throw array from above within integration limits, delete repetitions and sort
+    value = 0
+    for (a, b) in zip(points_of_interest[:-1], points_of_interest[1:]):
+        value += integration_wrapper(inner_integrand, a, b, args=(rb_min, rb_max, rc_min, rc_max), precision_factor=interval_len/(b-a))
     return value * 3 / (pow(ra_max, 3) - pow(ra_min, 3)) # normalize by integral of r^2 in bin
 
 for i, (ra_min, ra_max) in enumerate(long_bins):
