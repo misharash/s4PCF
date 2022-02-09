@@ -66,7 +66,6 @@ def G(rij, R, rb_min, rb_max, rc_min, rc_max):
     return value
 
 def inner_integrand(rij, rb_min, rb_max, rc_min, rc_max):
-    #print(f"Started inner integrand computation, rij={rij}, rb={rb_min, rb_max}, rc={rc_min, rc_max}") # comnment out later
     # xi_jk xi_il part - easier
     # xi_jk
     xi_jk_bavg = romberg(lambda R: R*xi_fun(R)*(np.square(rb_max) - np.square(rij - R)), rij - rb_max, rij - rb_min, vec_func=True, rtol=precision*2*rb_max/(rb_max-rb_min))
@@ -97,11 +96,11 @@ def inner_integrand(rij, rb_min, rb_max, rc_min, rc_max):
         # allow worse precision for short intervals
     xi_kl_bcavg *= 3 / (16 * rij * (pow(rb_max, 3) - pow(rb_min, 3)) * (pow(rc_max, 3) - pow(rc_min, 3))) # common factor
     value += xi_ik * xi_kl_bcavg
-    #print(f"Finished 2 part of inner integrand computation, rij={rij}, rb={rb_min, rb_max}, rc={rc_min, rc_max}") # comnment out later
-    return value
+    return value * np.square(rij) # r_ij^2 weighting for bin average
 
 def integrate_gs4PCF(ra_min, ra_max, rb_min, rb_max, rc_min, rc_max):
-    return romberg(inner_integrand, ra_min, ra_max, args=(rb_min, rb_max, rc_min, rc_max), rtol=precision)
+    value = romberg(inner_integrand, ra_min, ra_max, args=(rb_min, rb_max, rc_min, rc_max), rtol=precision)
+    return value * 3 / (pow(ra_max, 3) - pow(ra_min, 3)) # normalize by integral of r^2 in bin
 
 for i, (ra_min, ra_max) in enumerate(long_bins):
     print(f"Started {i+1} of {len(long_bins)} ({datetime.now()})")
