@@ -37,6 +37,8 @@ gs4PCF = np.ones(len(long_bins))[:, None, None] * np.expand_dims(np.outer(xi_bin
 
 np.seterr(all='raise')
 
+precision = 1e-6 # order of desired precision for integrals
+
 def G(rij, R, rb_min, rb_max, rc_min, rc_max):
     F11 = lambda r: r * (np.square(rb_max) - np.square(rb_min)) * (np.square(rc_max) - np.square(rc_min))
     F12 = lambda r: (np.square(rb_max) - np.square(rb_min)) * (np.square(rc_max) * r - (r - R)**3 / 3)
@@ -67,14 +69,14 @@ def inner_integrand(rij, rb_min, rb_max, rc_min, rc_max):
     #print(f"Started inner integrand computation, rij={rij}, rb={rb_min, rb_max}, rc={rc_min, rc_max}") # comnment out later
     # xi_jk xi_il part - easier
     # xi_jk
-    xi_jk_bavg = romberg(lambda R: R*xi_fun(R)*(np.square(rb_max) - np.square(rij - R)), rij - rb_max, rij - rb_min, vec_func=True)
-    xi_jk_bavg += romberg(lambda R: R*xi_fun(R)*(np.square(rb_max) - np.square(rb_min)), rij - rb_min, rij + rb_min, vec_func=True)
-    xi_jk_bavg += romberg(lambda R: R*xi_fun(R)*(np.square(rb_max) - np.square(rij - R)), rij + rb_min, rij + rb_max, vec_func=True)
+    xi_jk_bavg = romberg(lambda R: R*xi_fun(R)*(np.square(rb_max) - np.square(rij - R)), rij - rb_max, rij - rb_min, vec_func=True, rtol=precision*2*rb_max/(rb_max-rb_min))
+    xi_jk_bavg += romberg(lambda R: R*xi_fun(R)*(np.square(rb_max) - np.square(rb_min)), rij - rb_min, rij + rb_min, vec_func=True, rtol=precision*rb_max/rb_min)
+    xi_jk_bavg += romberg(lambda R: R*xi_fun(R)*(np.square(rb_max) - np.square(rij - R)), rij + rb_min, rij + rb_max, vec_func=True, rtol=precision*2*rb_max/(rb_max-rb_min))
     xi_jk_bavg *= 3 / (4 * rij * (pow(rb_max, 3) - pow(rb_min, 3))) # common factor
     # xi_il
-    xi_il_cavg = romberg(lambda R: R*xi_fun(R)*(np.square(rc_max) - np.square(rij - R)), rij - rc_max, rij - rc_min, vec_func=True)
-    xi_il_cavg += romberg(lambda R: R*xi_fun(R)*(np.square(rc_max) - np.square(rc_min)), rij - rc_min, rij + rc_min, vec_func=True)
-    xi_il_cavg += romberg(lambda R: R*xi_fun(R)*(np.square(rc_max) - np.square(rij - R)), rij + rc_min, rij + rc_max, vec_func=True)
+    xi_il_cavg = romberg(lambda R: R*xi_fun(R)*(np.square(rc_max) - np.square(rij - R)), rij - rc_max, rij - rc_min, vec_func=True, rtol=precision*2*rc_max/(rc_max-rc_min))
+    xi_il_cavg += romberg(lambda R: R*xi_fun(R)*(np.square(rc_max) - np.square(rc_min)), rij - rc_min, rij + rc_min, vec_func=True, rtol=precision*rc_max/rc_min)
+    xi_il_cavg += romberg(lambda R: R*xi_fun(R)*(np.square(rc_max) - np.square(rij - R)), rij + rc_min, rij + rc_max, vec_func=True, rtol=precision*2*rc_max/(rc_max-rc_min))
     xi_il_cavg *= 3 / (4 * rij * (pow(rc_max, 3) - pow(rc_min, 3))) # common factor
     # carry their product to final result
     value = xi_jk_bavg * xi_il_cavg
@@ -86,12 +88,13 @@ def inner_integrand(rij, rb_min, rb_max, rc_min, rc_max):
             for s1 in (-1, 1):
                 for s2 in (-1, 1):
                     points_of_interest.append(s1 * c1 + s2 * c2)
-    points_of_interest.sort()
-    points_of_interest = rij + np.unique(points_of_interest) # delete repeating points and add rij
+    points_of_interest = rij + np.sort(np.unique(points_of_interest)) # delete repeating points, sort and add rij
+    interval_len = points_of_interest[-1] - points_of_interest[0]
     xi_ik = xi_fun(rij)
     xi_kl_bcavg = 0
     for (a, b) in zip(points_of_interest[:-1], points_of_interest[1:]):
-        xi_kl_bcavg += romberg(lambda R: R*xi_fun(R)*G(rij, R, rb_min, rb_max, rc_min, rc_max), a, b)
+        xi_kl_bcavg += romberg(lambda R: R*xi_fun(R)*G(rij, R, rb_min, rb_max, rc_min, rc_max), a, b, rtol=precision*interval_len/(b-a))
+        # allow worse precision for short intervals
     xi_kl_bcavg *= 3 / (16 * rij * (pow(rb_max, 3) - pow(rb_min, 3)) * (pow(rc_max, 3) - pow(rc_min, 3))) # common factor
     value += xi_ik * xi_kl_bcavg
     #print(f"Finished 2 part of inner integrand computation, rij={rij}, rb={rb_min, rb_max}, rc={rc_min, rc_max}") # comnment out later
