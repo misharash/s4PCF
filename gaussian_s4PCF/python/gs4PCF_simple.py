@@ -20,8 +20,8 @@ xi_bins = xi_bins.astype(int)
 
 # read fine xi data and create function
 if os.path.exists(xi_fine_file):
-    r_vals, xi_vals = np.loadtxt(xi_fine_file).t
-    r2xi_fun = interp1d(r_vals, r_vals**2 * xi_vals) # add extrapolation?
+    r_vals, xi_vals = np.loadtxt(xi_fine_file)
+    r2xi_fun = interp1d(r_vals, r_vals**2 * xi_vals, kind='cubic') # add extrapolation?
     xi_fun = lambda r: r2xi_fun(r) / r**2
 else:
     xi_fun = lambda r: np.fmax(r, 1e-4)**-2
@@ -104,8 +104,10 @@ for i, (ra_min, ra_max) in enumerate(long_bins):
     print(f"Started {i+1} of {len(long_bins)} ({datetime.now()})")
     for j, (rb_min, rb_max) in enumerate(short_bins):
         for k, (rc_min, rc_max) in enumerate(short_bins[j:]):
+            print(f"Started {j, k} of {len(short_bins), len(short_bins)} ({datetime.now()})")
             gs4PCF[i, j, k] += integrate_gs4PCF(ra_min, ra_max, rb_min, rb_max, rc_min, rc_max)
             gs4PCF[i, k, j] = gs4PCF[i, j, k] # symmetry
+            print(f"Finished {j, k} of {len(short_bins), len(short_bins)} ({datetime.now()})")
     print(f"Finished {i+1} of {len(long_bins)} ({datetime.now()})")
 
 np.save(outfilename, gs4PCF)
