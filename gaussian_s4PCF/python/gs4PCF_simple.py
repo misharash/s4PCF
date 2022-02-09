@@ -43,9 +43,9 @@ def G(rij, R, rb_min, rb_max, rc_min, rc_max):
     F11 = lambda r: r * (np.square(rb_max) - np.square(rb_min)) * (np.square(rc_max) - np.square(rc_min))
     F12 = lambda r: (np.square(rb_max) - np.square(rb_min)) * (np.square(rc_max) * r - (r - R)**3 / 3)
     F21 = lambda r: (np.square(rc_max) - np.square(rc_min)) * (np.square(rb_max) * r - (r - rij)**3 / 3)
-    F22 = lambda r: np.square(rb_max) * np.square(rc_max) * r - np.square(rb_max) * (r - rij)**3 / 3 - np.square(rc_max) * (r - rij)**3 / 3 + np.square(rij) * np.square(R) * r - rij * R * (rij + R) * np.square(r) + (np.square(rij) + np.square(R) + 4 * rij * R) * r**3 / 3 - (R + rij) * r**4 / 2 + r**5 / 5
+    F22 = lambda r: np.square(rb_max) * np.square(rc_max) * r - np.square(rb_max) * (r - R)**3 / 3 - np.square(rc_max) * (r - rij)**3 / 3 + np.square(rij) * np.square(R) * r - rij * R * (rij + R) * np.square(r) + (np.square(rij) + np.square(R) + 4 * rij * R) * r**3 / 3 - (R + rij) * r**4 / 2 + r**5 / 5
     limits1 = np.array((rij - rb_max, rij - rb_min, rij + rb_min, rij + rb_max))
-    limits2 = np.array((R - rb_max, R - rb_min, R + rb_min, R + rb_max))
+    limits2 = np.array((R - rc_max, R - rc_min, R + rc_min, R + rc_max))
     integral_index = (1, 0, 1)
     integrals = ((F11, F12), (F21, F22))
     current = max(limits1[0], limits2[0])
