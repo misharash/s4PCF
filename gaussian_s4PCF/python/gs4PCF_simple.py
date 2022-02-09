@@ -42,7 +42,7 @@ np.seterr(all='raise')
 precision = 1e-3 # order of desired precision for integrals
 
 def integration_wrapper(*args, precision_factor=1, **kwargs):
-    return romberg(*args, rtol=precision_factor*precision, **kwargs)
+    return romberg(*args, rtol=precision, **kwargs)
 
 def G(rij, R, rb_min, rb_max, rc_min, rc_max):
     F11 = lambda r: r * (np.square(rb_max) - np.square(rb_min)) * (np.square(rc_max) - np.square(rc_min))
