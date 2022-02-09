@@ -108,10 +108,10 @@ for i, (ra_min, ra_max) in enumerate(long_bins):
     for j, (rb_min, rb_max) in enumerate(short_bins):
         for k, (rc_min, rc_max) in enumerate(short_bins):
             if k < j: continue
-            print(f"Started {j, k} of {len(short_bins), len(short_bins)} ({datetime.now()})")
+            print(f"Started {j + 1, k + 1} of {len(short_bins), len(short_bins)} ({datetime.now()})")
             gs4PCF[i, j, k] += integrate_gs4PCF(ra_min, ra_max, rb_min, rb_max, rc_min, rc_max)
             gs4PCF[i, k, j] = gs4PCF[i, j, k] # symmetry
-            print(f"Finished {j, k} of {len(short_bins), len(short_bins)} ({datetime.now()})")
+            print(f"Finished {j + 1, k + 1} of {len(short_bins), len(short_bins)} ({datetime.now()})")
     print(f"Finished {i+1} of {len(long_bins)} ({datetime.now()})")
 
 np.save(outfilename, gs4PCF)
