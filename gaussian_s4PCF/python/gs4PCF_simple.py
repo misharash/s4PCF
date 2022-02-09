@@ -1,5 +1,6 @@
 import sys
 import os
+from datetime import datetime
 import numpy as np
 from scipy.integrate import quad
 from scipy.interpolate import interp1d
@@ -33,7 +34,6 @@ if len(xi_bins) != len(short_bins) or not all(xi_bins == np.arange(len(short_bin
 
 # dominant part - outer product of short bin-averaged CFs, independent of long bin
 gs4PCF = np.ones(len(long_bins))[:, None, None] * np.expand_dims(np.outer(xi_bins_vals, xi_bins_vals), axis=0)
-print(np.shape(gs4PCF))
 
 np.seterr(all='raise')
 
@@ -101,11 +101,11 @@ def integrate_gs4PCF(ra_min, ra_max, rb_min, rb_max, rc_min, rc_max):
     return quad(inner_integrand, ra_min, ra_max, args=(rb_min, rb_max, rc_min, rc_max))[0]
 
 for i, (ra_min, ra_max) in enumerate(long_bins):
-    print(f"Started {i+1} of {len(long_bins)}")
+    print(f"Started {i+1} of {len(long_bins)} ({datetime.now()})")
     for j, (rb_min, rb_max) in enumerate(short_bins):
         for k, (rc_min, rc_max) in enumerate(short_bins[j:]):
             gs4PCF[i, j, k] += integrate_gs4PCF(ra_min, ra_max, rb_min, rb_max, rc_min, rc_max)
             gs4PCF[i, k, j] = gs4PCF[i, j, k] # symmetry
-    print(f"Finished {i+1} of {len(long_bins)}")
+    print(f"Finished {i+1} of {len(long_bins)} ({datetime.now()})")
 
 np.save(outfilename, gs4PCF)
