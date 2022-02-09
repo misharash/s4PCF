@@ -19,12 +19,13 @@ xi_bins, xi_bins_vals = np.loadtxt(xi_coarse_file)
 xi_bins = xi_bins.astype(int)
 
 # read fine xi data and create function
+rmin = 1e-4
 if os.path.exists(xi_fine_file):
     r_vals, xi_vals = np.loadtxt(xi_fine_file)
     r2xi_fun = interp1d(r_vals, r_vals**2 * xi_vals, kind='cubic', fill_value="extrapolate")
-    xi_fun = lambda r: r2xi_fun(r) / r**2
+    xi_fun = lambda r: r2xi_fun(r) * np.fmax(r, rmin)**-2
 else:
-    xi_fun = lambda r: np.fmax(r, 1e-4)**-2
+    xi_fun = lambda r: np.fmax(r, rmin)**-2
 
 # read bins
 long_bins = np.loadtxt(long_bin_file)
