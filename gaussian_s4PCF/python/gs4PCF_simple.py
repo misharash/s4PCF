@@ -39,10 +39,11 @@ gs4PCF = np.ones(len(long_bins))[:, None, None] * np.expand_dims(np.outer(xi_bin
 
 np.seterr(all='raise')
 
-precision = 1e-3 # order of desired precision for integrals
+rel_precision = 1e-3 # order of desired relative precision for integrals
+abs_precision = 1e-5 # order of desired absolute precision for integrals, should be fine as smallest complete integral is order of 1
 
 def integration_wrapper(*args, precision_factor=1, **kwargs):
-    return romberg(*args, rtol=precision, **kwargs)
+    return romberg(*args, rtol=rel_precision, tol=abs_precision, **kwargs)
 
 def G(rij, R, rb_min, rb_max, rc_min, rc_max):
     F11 = lambda r: r * (np.square(rb_max) - np.square(rb_min)) * (np.square(rc_max) - np.square(rc_min))
