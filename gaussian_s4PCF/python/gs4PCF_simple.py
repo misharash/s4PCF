@@ -42,7 +42,7 @@ np.seterr(all='raise')
 rel_precision = 1e-3 # order of desired relative precision for integrals
 abs_precision = 1e-5 # order of desired absolute precision for integrals, should be fine as smallest complete integral is order of 1
 
-def integration_wrapper(*args, precision_factor=1, **kwargs):
+def integration_wrapper(*args, **kwargs):
     return romberg(*args, rtol=rel_precision, tol=abs_precision, **kwargs)
 
 def G(rij, R, rb_min, rb_max, rc_min, rc_max):
@@ -82,7 +82,7 @@ def inner_integrand(rij, rb_min, rb_max, rc_min, rc_max):
     interval_len = points_of_interest[-1] - points_of_interest[0]
     xi_jk_bavg = 0
     for (a, b) in zip(points_of_interest[:-1], points_of_interest[1:]):
-        xi_jk_bavg += integration_wrapper(lambda R: R*xi_fun(R)*(np.square(rb_max) - np.fmax(np.square(rij - R), np.square(rb_min))), a, b, vec_func=True, precision_factor=interval_len/(b-a))
+        xi_jk_bavg += integration_wrapper(lambda R: R*xi_fun(R)*(np.square(rb_max) - np.fmax(np.square(rij - R), np.square(rb_min))), a, b, vec_func=True)
     xi_jk_bavg *= 3 / (4 * rij * (pow(rb_max, 3) - pow(rb_min, 3))) # common factor
     # xi_il
     points_of_interest = np.array((rc_min, rc_max)) # throw r_cmin/max
@@ -93,7 +93,7 @@ def inner_integrand(rij, rb_min, rb_max, rc_min, rc_max):
     interval_len = points_of_interest[-1] - points_of_interest[0]
     xi_il_cavg = 0
     for (a, b) in zip(points_of_interest[:-1], points_of_interest[1:]):
-        xi_il_cavg += integration_wrapper(lambda R: R*xi_fun(R)*(np.square(rc_max) - np.fmax(np.square(rij - R), np.square(rc_min))), a, b, vec_func=True, precision_factor=interval_len/(b-a))
+        xi_il_cavg += integration_wrapper(lambda R: R*xi_fun(R)*(np.square(rc_max) - np.fmax(np.square(rij - R), np.square(rc_min))), a, b, vec_func=True)
     xi_il_cavg *= 3 / (4 * rij * (pow(rc_max, 3) - pow(rc_min, 3))) # common factor
     # carry their product to final result
     value = xi_jk_bavg * xi_il_cavg
@@ -113,8 +113,7 @@ def inner_integrand(rij, rb_min, rb_max, rc_min, rc_max):
     xi_ik = xi_fun(rij)
     xi_kl_bcavg = 0
     for (a, b) in zip(points_of_interest[:-1], points_of_interest[1:]):
-        xi_kl_bcavg += integration_wrapper(lambda R: R*xi_fun(R)*G(rij, R, rb_min, rb_max, rc_min, rc_max), a, b, precision_factor=interval_len/(b-a))
-        # allow worse precision for short intervals
+        xi_kl_bcavg += integration_wrapper(lambda R: R*xi_fun(R)*G(rij, R, rb_min, rb_max, rc_min, rc_max), a, b)
     xi_kl_bcavg *= 3 / (16 * rij * (pow(rb_max, 3) - pow(rb_min, 3)) * (pow(rc_max, 3) - pow(rc_min, 3))) # common factor
     value += xi_ik * xi_kl_bcavg
     return value * np.square(rij) # r_ij^2 weighting for bin average
@@ -133,7 +132,7 @@ def integrate_gs4PCF(ra_min, ra_max, rb_min, rb_max, rc_min, rc_max):
     points_of_interest = np.sort(np.unique(np.append(points_of_interest, shited_r_vals[np.logical_and(shited_r_vals > ra_min, shited_r_vals < ra_max)]))) # throw array from above within integration limits, delete repetitions and sort
     value = 0
     for (a, b) in zip(points_of_interest[:-1], points_of_interest[1:]):
-        value += integration_wrapper(inner_integrand, a, b, args=(rb_min, rb_max, rc_min, rc_max), precision_factor=interval_len/(b-a))
+        value += integration_wrapper(inner_integrand, a, b, args=(rb_min, rb_max, rc_min, rc_max))
     return value * 3 / (pow(ra_max, 3) - pow(ra_min, 3)) # normalize by integral of r^2 in bin
 
 for i, (ra_min, ra_max) in enumerate(long_bins):
