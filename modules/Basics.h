@@ -46,7 +46,7 @@ class Grid {
 
     int test_cell(integer3 cell){
     // returns -1 if cell is outside the grid or wraps around for the periodic grid
-#ifndef PERIODIC
+#if (!PERIODIC)
     	if(nside_cuboid.x<=cell.x||cell.x<0||nside_cuboid.y<=cell.y||cell.y<0||nside_cuboid.z<=cell.z||cell.z<0){
             return -1;
         }else
@@ -58,7 +58,7 @@ class Grid {
         // Return the 1-d cell number, after wrapping
 	// We apply a very large bias, so that we're
 	// guaranteed to wrap any reasonable input.
-#ifdef PERIODIC
+#if PERIODIC
 	int cx = (cell.x+ncells)%nside_cuboid.x;
 	int cy = (cell.y+ncells)%nside_cuboid.y;
 	int cz = (cell.z+ncells)%nside_cuboid.z;
@@ -137,7 +137,7 @@ class Grid {
     // Shift them to the primary volume first
 	int *cell = (int *)malloc(sizeof(int)*np);
 
-#ifdef PERIODIC
+#if PERIODIC
     for (int j=0; j<np; j++) cell[j] = pos_to_cell(input[j].pos);
 #else
     for (int j=0; j<np; j++) cell[j] = pos_to_cell(input[j].pos - shift);
@@ -177,7 +177,7 @@ class Grid {
 	    Cell *thiscell = c+cell[j];
 	    int index = thiscell->start+thiscell->np;
 	    p[index] = input[j];
-#ifdef PERIODIC
+#if PERIODIC
         // Switch to cell-centered positions
 	    p[index].pos = cell_centered_pos(input[j].pos);
 #endif

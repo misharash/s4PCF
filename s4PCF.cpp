@@ -16,6 +16,9 @@
 #include <omp.h>
 #endif
 
+// Whether we are in periodic box
+#define PERIODIC 1
+
 // NBIN is the number of bins we'll sort the radii into.
 #define NBIN_SHORT 10 // short sides
 #define NBIN_LONG 30 // long side

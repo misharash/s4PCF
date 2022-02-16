@@ -83,9 +83,9 @@ void compute_pairs(Grid* grid,
 
                         // Define primary position
                         Float3 ppos = grid->p[j].pos;
-#ifdef PERIODIC
+                        #if PERIODIC
                         ppos -= grid->cell_sep(delta);
-#endif
+                        #endif
 
                         // This is the position of the particle as viewed
                         // from the secondary cell. Now loop over the
@@ -136,13 +136,13 @@ void compute_pairs(Grid* grid,
 
                                             // Define primary position
                                             Float3 ppos2 = grid->p[j].pos;
-                                            #ifdef PERIODIC
+                                            #if PERIODIC
                                             ppos2 -= grid->cell_sep(delta2);
                                             #endif
 
                                             // Define secondary position
                                             Float3 spos2 = grid->p[k].pos;
-                                            #ifdef PERIODIC
+                                            #if PERIODIC
                                             spos2 -= grid->cell_sep(delta2) - grid->cell_sep(delta);
                                             #endif
                                             // This is the position of the particle as viewed
@@ -219,9 +219,9 @@ void compute_pairs(Grid* grid,
 
                             // Define primary position
                             Float3 ppos = grid->p[j].pos;
-#ifdef PERIODIC
+                            #if PERIODIC
                             ppos -= grid->cell_sep(delta);
-#endif
+                            #endif
 
                             // This is the position of the particle as viewed
                             // from the secondary cell. Now loop over the
@@ -283,9 +283,9 @@ void compute_pairs(Grid* grid,
 
                         // Define primary position
                         Float3 ppos = grid->p[j].pos;
-#ifdef PERIODIC
+                        #if PERIODIC
                         ppos -= grid->cell_sep(delta);
-#endif
+                        #endif
 
                         // This is the position of the particle as
                         // viewed from the secondary cell. Now loop over
