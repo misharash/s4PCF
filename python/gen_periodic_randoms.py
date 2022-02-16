@@ -11,6 +11,6 @@ else:
     boxsize = float(sys.argv[2])
     outfile = sys.argv[3]
 
-gals_pos = np.random.rand((3, N)) * boxsize # 3 coordinate sequences of length N, between 0 and boxsize
+gals_pos = np.random.rand(3, N) * boxsize # 3 coordinate sequences of length N, between 0 and boxsize
 gals_pos_weights = np.append(gals_pos, np.ones((1, N)), axis=0) # append column of ones for weights
 np.savetxt(outfile, gals_pos_weights.T) # save to file
