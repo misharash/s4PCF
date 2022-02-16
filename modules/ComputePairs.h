@@ -133,6 +133,18 @@ void compute_pairs(Grid* grid,
                                             if (tmp_test < 0)
                                                 continue;
                                             Cell third = grid->c[tmp_test];
+
+                                            // Define primary position
+                                            Float3 ppos2 = grid->p[j].pos;
+                                            #ifdef PERIODIC
+                                            ppos2 -= grid->cell_sep(delta2);
+                                            #endif
+
+                                            // Define secondary position
+                                            Float3 spos2 = grid->p[k].pos;
+                                            #ifdef PERIODIC
+                                            spos2 -= grid->cell_sep(delta2) - grid->cell_sep(delta);
+                                            #endif
                                             // This is the position of the particle as viewed
                                             // from the secondary cell. Now loop over the
                                             // particles in this secondary cell
@@ -141,9 +153,9 @@ void compute_pairs(Grid* grid,
                                                 // Now we're considering these two particles!
                                                 if ((j==l) || (k==l))
                                                     continue;  // Exclude self-count
-                                                Float3 dx = grid->p[l].pos - ppos;
+                                                Float3 dx = grid->p[l].pos - ppos2;
                                                 Float norm_2 = dx.norm2();
-                                                Float3 dx_l = grid->p[l].pos - grid->p[k].pos;
+                                                Float3 dx_l = grid->p[l].pos - spos2;
                                                 Float norm_l2 = dx_l.norm2();
                                                 // Check if this is in the correct binning
                                                 // ranges
