@@ -19,7 +19,7 @@ import numpy as np
 ##################### INPUT PARAMETERS ###################
 
 # Main inputs
-periodic = 0 # whether to run with periodic boundary conditions (should also be set in Makefile)
+periodic = 1 # whether to run with periodic boundary conditions (should also be set in Makefile)
 rmin_short = 0 # minimum radius in Mpc/h
 rmax_short = 30 # maximum radius in Mpc/h
 rmin_long = 60 # minimum long side radius in Mpc/h
@@ -30,15 +30,15 @@ rmax_cf = 300 # maximum fine 2PCF radius in Mpc/h
 # Other inputs
 scale = 1 # rescaling for co-ordinates
 ngrid = 50 # grid size for accelerating pair count
-boxsize = 1000 # only used if periodic=1
+boxsize = 2000 # only used if periodic=1
 
 # File names and directories
-datafilenames = [f"qpm_galaxies/{i+1:04d}.xyz" for i in range(50)] # data filenames
-randomfilename = "qpm_randoms_10x.xyzwj" # random filename
-outroot = "qpm_galaxies" # base name for outputs
+datafilenames = ["LRGs.xyzw"] # data filenames
+randomfilename = "LRG_randoms.xyzw" # random filename
+outroot = "AbacusSummit_mocks_LRG1" # base name for outputs
 workdir = os.getcwd()
-indir = os.path.join(workdir, "gaussian_s4PCF") # input directory (see above for required contents)
-outdir = os.path.join(workdir, "out50_longer") # output file directory
+indir = workdir # input directory (see above for required contents)
+outdir = os.path.join(workdir, "out_periodic1") # output file directory
 tmpdir = os.path.join(workdir, "tmp") # temporary directory for intermediate file storage for this run (ideally somewhere with fast I/O)
 scriptname = "run_npcf.py"
 
