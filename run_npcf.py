@@ -43,6 +43,7 @@ tmpdir = os.path.join(workdir, "tmp") # temporary directory for intermediate fil
 scriptname = "run_npcf.py"
 
 do_full = 1 # whether do full computation or only combine existing intermediate files
+final_cleanup = 0 # whether to delete directory in the end
 
 ##########################################################
 
@@ -180,4 +181,5 @@ os.chdir(workdir)
 os.system(f"mv {os.path.join(tmpdir, outroot)}.tgz {os.path.join(tmpdir, outroot)}.zeta_*pcf.txt {os.path.normpath(outdir)}/")
 
 # Destroy temporary dir
-os.system(f"rm -rf {tmpdir}")
+if final_cleanup:
+    os.system(f"rm -rf {tmpdir}")
