@@ -116,7 +116,7 @@ if do_full:
 
 # First do R^N
 # for each random part
-for i in range(Nparts*do_full): # skip if do_full is false
+for i in range(Nparts * do_full * (not periodic)): # skip if do_full is false, or if we are periodic
     # Compute R^N NPCF counts
     print_and_log(f"Starting R[{i}]^N")
     print_and_log(datetime.now())
