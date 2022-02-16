@@ -15,5 +15,6 @@ else:
 
 gals_arr = ascii.read(infile) # contains x, y, z and so on, column titles specified in first non-comment string
 # stack 3 coordinate columns and weights of 1 for each galaxy, transpose
-gals_pos_weights = np.vstack((gals_arr['x'], gals_arr['y'], gals_arr['z'], np.ones_like(gals_arr['x']))).T
-np.savetxt(outfile, gals_pos_weights) # save to file
+gals_pos_weights = np.vstack((gals_arr['x'], gals_arr['y'], gals_arr['z'], np.ones_like(gals_arr['x'])))
+gals_pos_weights[:3] += boxsize/2 # shift coordinates from [-boxsize/2, boxsize/2] range to [0, boxsize]
+np.savetxt(outfile, gals_pos_weights.T) # save to file
