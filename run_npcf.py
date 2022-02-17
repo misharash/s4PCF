@@ -161,12 +161,12 @@ for j, datafilename in enumerate(datafilenames*do_full): # skip if do_full is fa
 # We do this in another python script, and perform edge-correction unless the periodic flag is not set
 if periodic:
     print("Combining files together without performing edge-corrections (using analytic R^N counts)")
-    # The script doesn't exist yet
-    os.system(f"python python/combine_files_periodic_new.py {os.path.join(tmpdir, outroot)} {len(datafilenames)} {Nparts} | tee -a {errlog}")
+    # run script, print output to stdout AND append to errlog
+    os.system(f"python python/combine_files_new.py 1 {os.path.join(tmpdir, outroot)} {len(datafilenames)} {Nparts} {boxsize} {rmin_short} {rmax_short} {rmin_long} {rmax_long} {rmin_cf} {rmax_cf} | tee -a {errlog}")
 else:
     print("Combining files together and performing edge-corrections")
     # run script, print output to stdout AND append to errlog
-    os.system(f"python python/combine_files_new.py {os.path.join(tmpdir, outroot)} {len(datafilenames)} {Nparts} | tee -a {errlog}")
+    os.system(f"python python/combine_files_new.py 0 {os.path.join(tmpdir, outroot)} {len(datafilenames)} {Nparts} | tee -a {errlog}")
 
 print_and_log(f"Finished with computation. Placing results into {outdir}/")
 print_log(datetime.now())

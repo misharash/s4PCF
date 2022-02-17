@@ -162,10 +162,10 @@ end    # foreach D-R loop
 if ($periodic) then
   echo Combining files together without performing edge-corrections (using analytic R^N counts)
   # this script not adapted yet
-  python python/combine_files_periodic.py $tmpout/$root $Ngal $boxsize $rmin_short $rmax_short >>& $errlog
+  python python/combine_files.py 1 $tmpout/$root $boxsize $rmin_short $rmax_short $rmin_long $rmax_long $rmin_cf $rmax_cf >>& $errlog
 else
   echo Combining files together and performing edge-corrections
-  python python/combine_files.py $tmpout/$root >>& $errlog
+  python python/combine_files.py 0 $tmpout/$root >>& $errlog
 endif
 
 # Do some cleanup
