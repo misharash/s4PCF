@@ -29,8 +29,8 @@ else:
     rmax_short = float(sys.argv[7])
     rmin_long = float(sys.argv[8])
     rmax_long = float(sys.argv[9])
-    rmin_fine = float(sys.argv[10])
-    rmax_fine = float(sys.argv[11])
+    rmin_cf = float(sys.argv[10])
+    rmax_cf = float(sys.argv[11])
     # number of galaxies is not needed, since counts are normalized by (sum of positive weights)^-N
     radius = lambda bin, maxbin, rmin, rmax: rmin + 1.*bin*(rmax-rmin)/(maxbin+1)
     bin_volume = lambda bin, maxbin, rmin, rmax: boxsize**-3*4.*np.pi/3.*(radius(bin+1,maxbin,rmin,rmax)**3.-radius(bin,maxbin,rmin,rmax)**3.)
@@ -56,14 +56,14 @@ for N in Ns:
         bins = np.loadtxt(DmR_file, max_rows=n-1)
         if N == "fine2":
             bins = np.arange(len(bins))[:, None] # in this case "bins" is midpoints, need to override with bin numbers and add second dim
-            n_mu = len(np.loadtxt(DmR_file, skiprows=1, max_rows=1)[0]) # count mu bins
-            countsR = bin_volume_cf(bins, max(bins)) / n_mu
+            n_mu = len(np.loadtxt(DmR_file, skiprows=1, max_rows=1)) # count mu bins
+            countsR = bin_volume_cf(bins, np.max(bins)) / n_mu
         elif N == "2":
-            countsR = bin_volume_short(bins, max(bins))
+            countsR = bin_volume_short(bins, np.max(bins))
         elif N == "3":
-            countsR = bin_volume_short(bins[0], max(bins)) * bin_volume_short(bins[1], max(bins))
+            countsR = bin_volume_short(bins[0], np.max(bins)) * bin_volume_short(bins[1], np.max(bins))
         elif N == "4":
-            countsR = 0.5 * bin_volume_long(bins[0], max(bins[0])) * bin_volume_short(bins[1], max(bins[1:])) * bin_volume_short(bins[2], max(bins[1:]))
+            countsR = 0.5 * bin_volume_long(bins[0], np.max(bins[0])) * bin_volume_short(bins[1], np.max(bins[1:])) * bin_volume_short(bins[2], np.max(bins[1:]))
             # factor of 1/2 because we count only quadruples with i < j (or vice versa)
         else: # should never reach this
             raise Exception(f"Unrecoginized N: {N}")
