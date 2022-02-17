@@ -63,8 +63,7 @@ for N in Ns:
         elif N == "3":
             countsR = bin_volume_short(bins[0], np.max(bins)) * bin_volume_short(bins[1], np.max(bins))
         elif N == "4":
-            countsR = 0.5 * bin_volume_long(bins[0], np.max(bins[0])) * bin_volume_short(bins[1], np.max(bins[1:])) * bin_volume_short(bins[2], np.max(bins[1:]))
-            # factor of 1/2 because we count only quadruples with i < j (or vice versa)
+            countsR = bin_volume_long(bins[0], np.max(bins[0])) * bin_volume_short(bins[1], np.max(bins[1:])) * bin_volume_short(bins[2], np.max(bins[1:]))
         else: # should never reach this
             raise Exception(f"Unrecoginized N: {N}")
         R_file = inroot+'.n00_%spcf.txt'%N # technically it's DmR_file, but that will be overridden. R_file won't exist in periodic case. This will be used as source of bin data for output.
