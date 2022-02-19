@@ -30,6 +30,9 @@
 // Beneficial for performance - avoids triple loop
 // Also guarantees no other 4PCF self-counts are involved
 #define PREVENT_TRIANGLES 0
+// Next option does not check any conditions, just disables any self-count exclusion code
+// Thus use with caution, make sure that rmin_long >= 2*rmax_short
+#define IGNORE_TRIANGLES 1
 
 // MAXTHREAD is the maximum number of allowed threads.
 // Big trouble if actual number exceeds this!

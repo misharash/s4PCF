@@ -114,7 +114,7 @@ void compute_pairs(Grid* grid,
                             npcf[thread].excl_3pcf(bin, grid->p[k].w * grid->p[k].w * primary_w);
 
                             // Exclude triangular self-counts from 4PCF
-                            #if (!PREVENT_TRIANGLES)
+                            #if (!PREVENT_TRIANGLES && !IGNORE_TRIANGLES)
                             if (rmin_long < 2*rmax_short) {
                                 integer3 delta2;
                                 for (delta2.x = -maxsep_short; delta2.x <= maxsep_short; delta2.x++)
@@ -175,7 +175,7 @@ void compute_pairs(Grid* grid,
                             #endif
 
                             // Exclude triple-side self-counts from 4PCF
-                            #if (!PREVENT_TRIANGLES)
+                            #if (!PREVENT_TRIANGLES && !IGNORE_TRIANGLES)
                             if (rmin_long < rmax_short) {
                                 if (norm2 >= rmax_long2 || norm2 <= rmin_long2)
                                     continue;
@@ -189,7 +189,7 @@ void compute_pairs(Grid* grid,
             // done with delta.x loop
 
             // Now exclude 4pcf double-side self-counts
-            #if (!PREVENT_TRIANGLES)
+            #if (!PREVENT_TRIANGLES && !IGNORE_TRIANGLES)
             if (rmin_long < rmax_short) {
                 for (delta.x = -maxsep_short; delta.x <= maxsep_short; delta.x++)
                     for (delta.y = -maxsep_short; delta.y <= maxsep_short; delta.y++)
