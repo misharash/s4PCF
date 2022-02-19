@@ -39,7 +39,7 @@ class Pairs {
         }
     }
 
-    inline void add(int b, Float dz, Float w) {
+    inline void add(int b, Float w) {
         // Add up the weighted pair for the monopole and quadrupole correlation
         // function
         xi0[b] += w;

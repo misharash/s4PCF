@@ -106,15 +106,10 @@ void compute_pairs(Grid* grid,
                             // Find the radial bin
                             int bin = floor((norm2 - rmin_short) / (rmax_short - rmin_short) * NBIN_SHORT);
 
-                            // Define x/r,y/r,z/r
-                            dx = dx / norm2;
-
-                            // continue;   // Skip pairs and multipoles
-
                             // Accumulate the 2-pt correlation function
                             // We include the weight for each pair
-                            pairs_i[j].add(bin, dx.z, grid->p[k].w * primary_w);
-                            pairs[thread].add(bin, dx.z, grid->p[k].w * primary_w);
+                            pairs_i[j].add(bin, grid->p[k].w * primary_w);
+                            pairs[thread].add(bin, grid->p[k].w * primary_w);
                             // Exclude self-counts from 3PCF
                             npcf[thread].excl_3pcf(bin, grid->p[k].w * grid->p[k].w * primary_w);
 
