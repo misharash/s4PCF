@@ -10,7 +10,7 @@ if len(sys.argv)!=3:
 infile = str(sys.argv[1])
 outfile = str(sys.argv[2])
 
-xi_in_data = np.loadtxt(infile, skiprows=2)
+xi_in_data = np.loadtxt(infile, skiprows=2, ndmin=2)
 r_bins = np.loadtxt(infile, max_rows=1)
 
 xi_out_data = np.mean(xi_in_data, axis=1)
