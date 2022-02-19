@@ -313,13 +313,16 @@ void compute_pairs(Grid* grid,
                         ppos -= grid->cell_sep(delta);
                         #endif
 
+                        int end = sec.start + sec.np; // cell ID to stop the next loop at
+                        if (j < end) end = j; // guarantee k < j to skip self-counts and count each pair only once, spare k < j check inside the loop
+
                         // This is the position of the particle as
                         // viewed from the secondary cell. Now loop over
                         // the particles in this secondary cell
-                        for (int k = sec.start; k < sec.start + sec.np; k++) {
+                        for (int k = sec.start; k < end; k++) {
+                            // end <= j thus k < j
+                            // end <= sec.start + sec.np thus k is in the current cell
                             // Now we're considering these two particles!
-                            if (j <= k)
-                                continue;  // Exclude self-count and secondary points whose pairs have not been computed yet
                             Float3 dx = grid->p[k].pos - ppos;
                             Float norm2 = dx.norm2();
                             // Check if this is in the correct binning ranges
