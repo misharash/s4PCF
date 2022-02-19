@@ -33,7 +33,7 @@ void compute_pairs(Grid* grid,
         powertime;  // measure the time spent accumulating powers for multipoles
     // We're going to loop only over the non-empty cells.
 
-    long icnt = 0;
+    accpairs.Start();
 
 #ifdef OPENMP
 #pragma omp parallel for schedule(dynamic, 8) reduction(+ : cnt)
@@ -54,8 +54,7 @@ void compute_pairs(Grid* grid,
             printf("# Running single threaded.\n");
 #endif
         if (int(ne % 1000) == 0)
-            printf("Computing cell %d of %d on thread %d\n", ne, grid->nf,
-                   thread);
+            printf("Computing cell %d of %d on thread %d (1st loop)\n", ne, grid->nf, thread);
 
         // Loop over primary cells.
         Cell primary = grid->c[n];
@@ -68,8 +67,6 @@ void compute_pairs(Grid* grid,
             Float primary_w = grid->p[j].w;
             // Then loop over secondaries, cell-by-cell
             integer3 delta;
-            if (thread == 0)
-                accpairs.Start();
             for (delta.x = -maxsep_short; delta.x <= maxsep_short; delta.x++)
                 for (delta.y = -maxsep_short; delta.y <= maxsep_short; delta.y++)
                     for (delta.z = -maxsep_short; delta.z <= maxsep_short; delta.z++) {
@@ -195,10 +192,6 @@ void compute_pairs(Grid* grid,
                     }      // Done with this delta.z loop
             // done with delta.y loop
             // done with delta.x loop
-            if (thread == 0) {
-                accpairs.Stop();
-                powertime.Start();
-            }
 
             // Now exclude 4pcf double-side self-counts
             #if (!PREVENT_TRIANGLES)
@@ -263,10 +256,48 @@ void compute_pairs(Grid* grid,
 
             // Now combine pair counts into 3pcf counts
             npcf[thread].add_3pcf(pairs_i + j, primary_w);
+        }  // Done with this primary particle
+
+    }  // Done with this primary cell (first loop), end of omp pragma
+
+    accpairs.Stop();
+
+    // Second loop, to make sure pair counts are ready
+
+    powertime.Start();
+
+#ifdef OPENMP
+#pragma omp parallel for schedule(dynamic, 8) reduction(+ : cnt)
+#endif
+
+    for (ne = 0; ne < grid->nf; ne++) {
+        int n = grid->filled[ne];  // Fetch the cell number
+
+        // Decide which thread we are in
+#ifdef OPENMP
+        int thread = omp_get_thread_num();
+        assert(omp_get_num_threads() <= MAXTHREAD);
+#else
+        int thread = 0;
+#endif
+        if (int(ne % 1000) == 0)
+            printf("Computing cell %d of %d on thread %d (2nd loop)\n", ne, grid->nf,
+                   thread);
+
+        // Loop over primary cells.
+        Cell primary = grid->c[n];
+        integer3 prim_id = grid->cell_id_from_1d(n);
+
+        // continue; // To skip all of the list-building and summations.
+        // Everything else takes negligible time
+        // Now we need to loop over all primary particles in this cell
+        for (int j = primary.start; j < primary.start + primary.np; j++) {
+            Float primary_w = grid->p[j].w;
+            // Then loop over secondaries, cell-by-cell
+            integer3 delta;
 
             // Now combine pair counts into 4pcf counts
 
-            icnt++;
             // This is done on CPU - calculate add_to_power here
             // Acumulate powers here - code in NPCF.h
             for (delta.x = -maxsep_long_or_cf; delta.x <= maxsep_long_or_cf;
@@ -319,11 +350,11 @@ void compute_pairs(Grid* grid,
                     }      // Done with this delta.z loop
                             // done with delta.y loop
             // done with delta.x loop
-            if (thread == 0)
-                powertime.Stop();
         }  // Done with this primary particle
 
-    }  // Done with this primary cell, end of omp pragma
+    }  // Done with this primary cell (second loop), end of omp pragma
+
+    powertime.Stop();
 
 #ifndef OPENMP
 #ifdef AVX
