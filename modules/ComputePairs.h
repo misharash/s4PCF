@@ -109,7 +109,6 @@ void compute_pairs(Grid* grid,
                             // Accumulate the 2-pt correlation function
                             // We include the weight for each pair
                             pairs_i[j].add(bin, grid->p[k].w * primary_w);
-                            pairs[thread].add(bin, grid->p[k].w * primary_w);
                             // Exclude self-counts from 3PCF
                             npcf[thread].excl_3pcf(bin, grid->p[k].w * grid->p[k].w * primary_w);
 
@@ -187,6 +186,7 @@ void compute_pairs(Grid* grid,
                     }      // Done with this delta.z loop
             // done with delta.y loop
             // done with delta.x loop
+            pairs[thread].sum_power(pairs_i + j);
 
             // Now exclude 4pcf double-side self-counts
             #if (!PREVENT_TRIANGLES && !IGNORE_TRIANGLES)
