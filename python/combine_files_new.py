@@ -72,7 +72,7 @@ for N in Ns:
         for i in range(Nrandoms):
             R_file = inroot+'.r%d_%spcf.txt'%(i, N)
             # Extract counts
-            countsR_all.append(np.loadtxt(R_file, skiprows=(len(N)>1))[n-1:]) # skipping rows with radial bins, skip 1 more row for fine2
+            countsR_all.append(np.loadtxt(R_file, skiprows=(len(N)>1), ndmin=2)[n-1:]) # skipping rows with radial bins, skip 1 more row for fine2
         countsR_all = np.asarray(countsR_all)
         countsR = np.mean(countsR_all,axis=0)
 
@@ -86,7 +86,7 @@ for N in Ns:
             for i in range(Nrandoms):
                 DmR_file = inroot+'.%d.n%d_%spcf.txt'%(j, i, N)
                 # Extract counts
-                countsN_all.append(np.loadtxt(DmR_file, skiprows=(len(N)>1))[n-1:]) # skipping rows with radial bins, skip 1 more row for fine2
+                countsN_all.append(np.loadtxt(DmR_file, skiprows=(len(N)>1), ndmin=2)[n-1:]) # skipping rows with radial bins, skip 1 more row for fine2
             countsN_all = np.asarray(countsN_all)
             countsN = np.mean(countsN_all,axis=0)
             countsN_alldata.append(countsN)

@@ -70,7 +70,7 @@ for N in Ns:
     else:
         # First load in R piece
         R_file = inputs+'.r_%spcf.txt'%N
-        countsR = np.loadtxt(DmR_file, skiprows=(len(N)>1))[n-1:] # skipping rows with radial bins, skip 1 more row for fine2
+        countsR = np.loadtxt(DmR_file, skiprows=(len(N)>1), ndmin=2)[n-1:] # skipping rows with radial bins, skip 1 more row for fine2
 
     # Now load in D-R pieces and average
     countsN_all = []
@@ -78,7 +78,7 @@ for N in Ns:
         DmR_file = inputs+'.n%s_%spcf.txt'%(str(i).zfill(2),N)
         if not os.path.exists(DmR_file): continue
         # Extract counts
-        countsN_all.append(np.loadtxt(DmR_file, skiprows=(len(N)>1))[n-1:]) # skipping rows with radial bins, skip 1 more row for fine2
+        countsN_all.append(np.loadtxt(DmR_file, skiprows=(len(N)>1), ndmin=2)[n-1:]) # skipping rows with radial bins, skip 1 more row for fine2
     countsN_all = np.asarray(countsN_all)
     N_files = len(countsN_all)
     countsN = np.mean(countsN_all,axis=0)
