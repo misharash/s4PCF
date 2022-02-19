@@ -57,7 +57,7 @@ for N in Ns:
         if N == "fine2":
             bins = np.arange(len(bins))[:, None] # in this case "bins" is midpoints, need to override with bin numbers and add second dim
             n_mu = len(np.loadtxt(DmR_file, skiprows=1, max_rows=1)) # count mu bins
-            countsR = bin_volume_cf(bins, np.max(bins)) / n_mu
+            countsR = 0.5 * bin_volume_cf(bins, np.max(bins)) / n_mu # factor of 1/2 because we count only i > j pairs for fine2pcf
         elif N == "2":
             countsR = bin_volume_short(bins, np.max(bins))
         elif N == "3":
