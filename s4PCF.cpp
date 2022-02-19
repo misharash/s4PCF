@@ -24,7 +24,7 @@
 #define NBIN_LONG 30 // long side
 #define NBIN_CF 500 // fine, anisotropic 2-point correlation function
 // MBIN is number of bins for mu
-#define MBIN_CF 10 // fine, anisotropic 2-point correlation function
+#define MBIN_CF 1 // fine, anisotropic 2-point correlation function
 
 // Whether to exclude bins that can allow triangles (k=l), r_ij<=r_ik+r_jl
 // Beneficial for performance - avoids triple loop
