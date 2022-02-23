@@ -93,12 +93,12 @@ def inner_integrand(rij, rb_min, rb_max, rc_min, rc_max):
     # throw interpolation grid points fitting in the range
     points_of_interest = np.sort(np.unique(points_of_interest)) # delete repeating points and sort by ascension
     interval_len = points_of_interest[-1] - points_of_interest[0]
-    xi_ik = xi_fun(rij)
+    xi_ij = xi_fun(rij)
     xi_kl_bcavg = 0
     for (a, b) in zip(points_of_interest[:-1], points_of_interest[1:]):
         xi_kl_bcavg += integration_wrapper(lambda R: R*xi_fun(R)*G(rij, R, rb_min, rb_max, rc_min, rc_max), a, b, vec_func=True)
     xi_kl_bcavg *= 9 / (16 * rij * (pow(rb_max, 3) - pow(rb_min, 3)) * (pow(rc_max, 3) - pow(rc_min, 3))) # common factor
-    value += xi_ik * xi_kl_bcavg
+    value += xi_ij * xi_kl_bcavg
     return value * np.square(rij) # r_ij^2 weighting for bin average
 
 def integrate_gs4PCF(ra_min, ra_max, rb_min, rb_max, rc_min, rc_max):
