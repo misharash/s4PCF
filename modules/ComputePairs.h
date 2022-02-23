@@ -373,7 +373,7 @@ void compute_pairs(Grid* grid,
     for (int bin = 0; bin < NBIN_CF; bin++) {
         Float rmin_bin = rmin_cf + bin * (rmax_cf - rmin_cf) / NBIN_CF;
         Float rmax_bin = rmin_cf + (bin + 1) * (rmax_cf - rmin_cf) / NBIN_CF;
-        Float w_prod = grid->sumw_neg * (2 * grid->sumw_pos + grid->sumw_neg) / pow(grid->max_boxsize, 3) * 4 * M_PI / 3 * (pow(rmax_bin, 3) - pow(rmin_bin, 3)) / MBIN_CF; // product of weights, contribution to a fine 2PCF bin
+        Float w_prod = 0.5 * grid->sumw_neg * (2 * grid->sumw_pos + grid->sumw_neg) / pow(grid->max_boxsize, 3) * 4 * M_PI / 3 * (pow(rmax_bin, 3) - pow(rmin_bin, 3)) / MBIN_CF; // product of weights, contribution to a fine 2PCF bin; extra 1/2 because we count only k < j pairs
         for (int mubin = 0; mubin < MBIN_CF; mubin++) finepairs[0].add_raw(bin, mubin, w_prod);
     }
     // add to 0th thread because it always exists
