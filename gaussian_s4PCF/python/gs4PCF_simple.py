@@ -45,31 +45,14 @@ abs_precision = 1e-5 # order of desired absolute precision for integrals, should
 def integration_wrapper(*args, **kwargs):
     return romberg(*args, rtol=rel_precision, tol=abs_precision, **kwargs)
 
+def g(rij, R, rb, rc):
+    F = lambda r: np.square(rb) * np.square(rc) * r - np.square(rb) * (r - R)**3 / 3 - np.square(rc) * (r - rij)**3 / 3 + np.square(rij) * np.square(R) * r - rij * R * (rij + R) * np.square(r) + (np.square(rij) + np.square(R) + 4 * rij * R) * r**3 / 3 - (R + rij) * r**4 / 2 + r**5 / 5
+    rmin = np.maximum(rij - rb, R - rc)
+    rmax = np.minimum(rij + rb, R + rc)
+    return (F(rmax) - F(rmin)) * (rmax > rmin)
+
 def G(rij, R, rb_min, rb_max, rc_min, rc_max):
-    F11 = lambda r: r * (np.square(rb_max) - np.square(rb_min)) * (np.square(rc_max) - np.square(rc_min))
-    F12 = lambda r: (np.square(rb_max) - np.square(rb_min)) * (np.square(rc_max) * r - (r - R)**3 / 3)
-    F21 = lambda r: (np.square(rc_max) - np.square(rc_min)) * (np.square(rb_max) * r - (r - rij)**3 / 3)
-    F22 = lambda r: np.square(rb_max) * np.square(rc_max) * r - np.square(rb_max) * (r - R)**3 / 3 - np.square(rc_max) * (r - rij)**3 / 3 + np.square(rij) * np.square(R) * r - rij * R * (rij + R) * np.square(r) + (np.square(rij) + np.square(R) + 4 * rij * R) * r**3 / 3 - (R + rij) * r**4 / 2 + r**5 / 5
-    limits1 = np.array((rij - rb_max, rij - rb_min, rij + rb_min, rij + rb_max))
-    limits2 = np.array((R - rc_max, R - rc_min, R + rc_min, R + rc_max))
-    integral_index = (1, 0, 1)
-    integrals = ((F11, F12), (F21, F22))
-    current = max(limits1[0], limits2[0])
-    i = np.count_nonzero(limits1 <= current) - 1
-    j = np.count_nonzero(limits2 <= current) - 1
-    value = 0
-    while i < len(limits1)-1 and j < len(limits2)-1:
-        i_next, j_next = i, j
-        if limits1[i + 1] <= limits2[j + 1]:
-            i_next += 1
-            nextel = limits1[i_next]
-        else:
-            j_next += 1
-            nextel = limits2[j_next]
-        integral = integrals[integral_index[i]][integral_index[j]]
-        value += integral(nextel) - integral(current)
-        i, j, current = i_next, j_next, nextel
-    return value
+    return g(rij, R, rb_max, rc_max) - g(rij, R, rb_min, rc_max) - g(rij, R, rb_max, rc_min) + g(rij, R, rb_min, rc_min)
 
 def inner_integrand(rij, rb_min, rb_max, rc_min, rc_max):
     # xi_jk xi_il part - easier
@@ -113,7 +96,7 @@ def inner_integrand(rij, rb_min, rb_max, rc_min, rc_max):
     xi_ik = xi_fun(rij)
     xi_kl_bcavg = 0
     for (a, b) in zip(points_of_interest[:-1], points_of_interest[1:]):
-        xi_kl_bcavg += integration_wrapper(lambda R: R*xi_fun(R)*G(rij, R, rb_min, rb_max, rc_min, rc_max), a, b)
+        xi_kl_bcavg += integration_wrapper(lambda R: R*xi_fun(R)*G(rij, R, rb_min, rb_max, rc_min, rc_max), a, b, vec_func=True)
     xi_kl_bcavg *= 9 / (16 * rij * (pow(rb_max, 3) - pow(rb_min, 3)) * (pow(rc_max, 3) - pow(rc_min, 3))) # common factor
     value += xi_ik * xi_kl_bcavg
     return value * np.square(rij) # r_ij^2 weighting for bin average
