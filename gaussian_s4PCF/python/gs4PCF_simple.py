@@ -4,15 +4,17 @@ from datetime import datetime
 import numpy as np
 from scipy.integrate import romberg
 from scipy.interpolate import interp1d
+from multiprocessing import Pool
 
-if len(sys.argv) == 6:
+if len(sys.argv) == 7:
     xi_coarse_file = sys.argv[1]
     xi_fine_file = sys.argv[2]
     long_bin_file = sys.argv[3]
     short_bin_file = sys.argv[4]
     outfilename = sys.argv[5]
+    Nproc = int(sys.argv[6])
 else:
-    raise Exception("Need to specify xi coarse file, xi fine file, long binning file, short binning file and output file name!")
+    raise Exception("Need to specify xi coarse file, xi fine file, long binning file, short binning file, output file name and number of processes!")
 
 # read coarse xi in short bins
 xi_bins, xi_bins_vals = np.loadtxt(xi_coarse_file)
@@ -35,7 +37,7 @@ if len(xi_bins) != len(short_bins) or not all(xi_bins == np.arange(len(short_bin
     raise Exception("Short bins in xi coarse file don't match short bin file")
 
 # dominant part - outer product of short bin-averaged CFs, independent of long bin
-gs4PCF = np.ones(len(long_bins))[:, None, None] * np.expand_dims(np.outer(xi_bins_vals, xi_bins_vals), axis=0)
+gs4PCF_base = np.ones(len(long_bins))[:, None, None] * np.expand_dims(np.outer(xi_bins_vals, xi_bins_vals), axis=0)
 
 np.seterr(all='raise')
 
@@ -114,15 +116,20 @@ def integrate_gs4PCF(ra_min, ra_max, rb_min, rb_max, rc_min, rc_max):
         value += integration_wrapper(inner_integrand, a, b, args=(rb_min, rb_max, rc_min, rc_max))
     return value * 3 / (pow(ra_max, 3) - pow(ra_min, 3)) # normalize by integral of r^2 in bin
 
-for i, (ra_min, ra_max) in enumerate(long_bins):
+def gs4PCF_integral_wrapper(i):
+    ra_min, ra_max = long_bins[i]
+    gs4PCF_i = np.zeros((len(short_bins), len(short_bins)))
     print(f"Started {i+1} of {len(long_bins)} ({datetime.now()})")
     for j, (rb_min, rb_max) in enumerate(short_bins):
         for k, (rc_min, rc_max) in enumerate(short_bins):
             if k < j: continue
-            print(f"Started {j + 1, k + 1} of {len(short_bins), len(short_bins)} ({datetime.now()})")
-            gs4PCF[i, j, k] += integrate_gs4PCF(ra_min, ra_max, rb_min, rb_max, rc_min, rc_max)
-            gs4PCF[i, k, j] = gs4PCF[i, j, k] # symmetry
-            print(f"Finished {j + 1, k + 1} of {len(short_bins), len(short_bins)} ({datetime.now()})")
+            gs4PCF_i[j, k] = integrate_gs4PCF(ra_min, ra_max, rb_min, rb_max, rc_min, rc_max)
+            gs4PCF_i[k, j] = gs4PCF_i[j, k] # symmetry
     print(f"Finished {i+1} of {len(long_bins)} ({datetime.now()})")
+    return gs4PCF_i
+
+pool = Pool(Nproc)
+gs4PCF_integral = np.array(pool.map(gs4PCF_integral_wrapper, range(len(long_bins))))
+gs4PCF = gs4PCF_base + gs4PCF_integral
 
 np.save(outfilename, gs4PCF)
