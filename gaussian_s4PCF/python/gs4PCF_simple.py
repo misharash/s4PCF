@@ -4,17 +4,19 @@ from datetime import datetime
 import numpy as np
 from scipy.integrate import romberg
 from scipy.interpolate import interp1d
-from multiprocessing import Pool
 
-if len(sys.argv) == 7:
+if len(sys.argv) == 6 or len(sys.argv) == 7:
     xi_coarse_file = sys.argv[1]
     xi_fine_file = sys.argv[2]
     long_bin_file = sys.argv[3]
     short_bin_file = sys.argv[4]
     outfilename = sys.argv[5]
-    Nproc = int(sys.argv[6])
+    if len(sys.argv) == 7:
+        Nproc = int(sys.argv[6])
+    else:
+        Nproc = 1
 else:
-    raise Exception("Need to specify xi coarse file, xi fine file, long binning file, short binning file, output file name and number of processes!")
+    raise Exception("Need to specify xi coarse file, xi fine file, long binning file, short binning file, output file name and (optional) number of processes!")
 
 # read coarse xi in short bins
 xi_bins, xi_bins_vals = np.loadtxt(xi_coarse_file)
@@ -128,8 +130,16 @@ def gs4PCF_integral_wrapper(i):
     print(f"Finished {i+1} of {len(long_bins)} ({datetime.now()})")
     return gs4PCF_i
 
-pool = Pool(Nproc)
-gs4PCF_integral = np.array(pool.map(gs4PCF_integral_wrapper, range(len(long_bins))))
+if Nproc > 1:
+    from multiprocessing import Pool
+    pool = Pool(Nproc)
+    print(f"Running with {Nproc} parallel processes")
+    gs4PCF_integral = np.array(pool.map(gs4PCF_integral_wrapper, range(len(long_bins))))
+elif Nproc == 1:
+    print(f"Running sequentially")
+    gs4PCF_integral = np.array([gs4PCF_integral_wrapper(i) for i in range(len(long_bins))])
+else:
+    raise Exception("Number of processes has to be positive!")
 gs4PCF = gs4PCF_base + gs4PCF_integral
 
 np.save(outfilename, gs4PCF)
