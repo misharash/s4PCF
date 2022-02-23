@@ -62,7 +62,6 @@ def inner_integrand(rij, rb_min, rb_max, rc_min, rc_max):
     points_of_interest = np.append(points_of_interest, r_vals[np.logical_and(r_vals > min(points_of_interest), r_vals < max(points_of_interest))])
     # throw interpolation grid points fitting in the range
     points_of_interest = np.sort(np.unique(points_of_interest)) # delete repeating points and sort by ascension
-    interval_len = points_of_interest[-1] - points_of_interest[0]
     xi_jk_bavg = 0
     for (a, b) in zip(points_of_interest[:-1], points_of_interest[1:]):
         xi_jk_bavg += integration_wrapper(lambda R: R*xi_fun(R)*(np.square(rb_max) - np.fmax(np.square(rij - R), np.square(rb_min))), a, b, vec_func=True)
@@ -73,7 +72,6 @@ def inner_integrand(rij, rb_min, rb_max, rc_min, rc_max):
     points_of_interest = np.append(points_of_interest, r_vals[np.logical_and(r_vals > min(points_of_interest), r_vals < max(points_of_interest))])
     # throw interpolation grid points fitting in the range
     points_of_interest = np.sort(np.unique(points_of_interest)) # delete repeating points and sort by ascension
-    interval_len = points_of_interest[-1] - points_of_interest[0]
     xi_il_cavg = 0
     for (a, b) in zip(points_of_interest[:-1], points_of_interest[1:]):
         xi_il_cavg += integration_wrapper(lambda R: R*xi_fun(R)*(np.square(rc_max) - np.fmax(np.square(rij - R), np.square(rc_min))), a, b, vec_func=True)
@@ -92,7 +90,6 @@ def inner_integrand(rij, rb_min, rb_max, rc_min, rc_max):
     points_of_interest = np.append(points_of_interest, r_vals[np.logical_and(r_vals > min(points_of_interest), r_vals < max(points_of_interest))])
     # throw interpolation grid points fitting in the range
     points_of_interest = np.sort(np.unique(points_of_interest)) # delete repeating points and sort by ascension
-    interval_len = points_of_interest[-1] - points_of_interest[0]
     xi_ij = xi_fun(rij)
     xi_kl_bcavg = 0
     for (a, b) in zip(points_of_interest[:-1], points_of_interest[1:]):
@@ -102,7 +99,6 @@ def inner_integrand(rij, rb_min, rb_max, rc_min, rc_max):
     return value * np.square(rij) # r_ij^2 weighting for bin average
 
 def integrate_gs4PCF(ra_min, ra_max, rb_min, rb_max, rc_min, rc_max):
-    interval_len = ra_max - ra_min
     points_of_interest = np.array((ra_min, ra_max))
     shifts = []
     for c1 in (rb_max, rb_min):
