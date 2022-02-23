@@ -65,6 +65,16 @@ void compute_pairs(Grid* grid,
         // Now we need to loop over all primary particles in this cell
         for (int j = primary.start; j < primary.start + primary.np; j++) {
             Float primary_w = grid->p[j].w;
+
+            #if (PERIODIC)
+            // do analytic pair counts for random secondary particles, i.e. take limit of their number to infinity
+            for (int bin = 0; bin < NBIN_SHORT; bin++) {
+                Float rmin_bin = rmin_short + bin * (rmax_short - rmin_short) / NBIN_SHORT;
+                Float rmax_bin = rmin_short + (bin + 1) * (rmax_short - rmin_short) / NBIN_SHORT;
+                pairs_i[j].add(bin, primary_w * (grid->sumw_neg) / pow(grid->max_boxsize, 3) * 4 * M_PI / 3 * (pow(rmax_bin, 3) - pow(rmin_bin, 3)));
+            }
+            #endif
+
             // Then loop over secondaries, cell-by-cell
             integer3 delta;
             for (delta.x = -maxsep_short; delta.x <= maxsep_short; delta.x++)
@@ -108,6 +118,9 @@ void compute_pairs(Grid* grid,
 
                             // Accumulate the 2-pt correlation function
                             // We include the weight for each pair
+                            #if (PERIODIC)
+                            if (grid->p[k].w > 0) // in periodic box, count only secondary data particles, randoms added earlier analytically
+                            #endif
                             pairs_i[j].add(bin, grid->p[k].w * primary_w);
                             // Exclude self-counts from 3PCF
                             npcf[thread].excl_3pcf(bin, grid->p[k].w * grid->p[k].w * primary_w);
@@ -342,6 +355,9 @@ void compute_pairs(Grid* grid,
                             // Find the fine 2pcf radial bin
                             int bin_cf = floor((norm2 - rmin_cf) / (rmax_cf - rmin_cf) * NBIN_CF);
                             // Accumulate fine 2PCF
+                            #if (PERIODIC)
+                            if ((primary_w > 0) && (grid->p[k].w > 0)) // count only data-data pairs
+                            #endif
                             if ((bin_cf >= 0) && (bin_cf < NBIN_CF)) // if not out of bounds
                                 finepairs[thread].add(bin_cf, dx.z, grid->p[k].w * primary_w);
                         }  // Done with this secondary particle
@@ -351,6 +367,17 @@ void compute_pairs(Grid* grid,
         }  // Done with this primary particle
 
     }  // Done with this primary cell (second loop), end of omp pragma
+
+    #if (PERIODIC)
+    // do analytical DR and RR counts for finepairs
+    for (int bin = 0; bin < NBIN_CF; bin++) {
+        Float rmin_bin = rmin_cf + bin * (rmax_cf - rmin_cf) / NBIN_CF;
+        Float rmax_bin = rmin_cf + (bin + 1) * (rmax_cf - rmin_cf) / NBIN_CF;
+        Float w_prod = grid->sumw_neg * (2 * grid->sumw_pos + grid->sumw_neg) / pow(grid->max_boxsize, 3) * 4 * M_PI / 3 * (pow(rmax_bin, 3) - pow(rmin_bin, 3)) / MBIN_CF; // product of weights, contribution to a fine 2PCF bin
+        for (int mubin = 0; mubin < MBIN_CF; mubin++) finepairs[0].xi[bin * MBIN_CF + mubin] += w_prod;
+    }
+    // add to 0th thread because it always exists
+    #endif
 
     powertime.Stop();
 

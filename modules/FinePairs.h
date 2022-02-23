@@ -4,7 +4,7 @@
 // Accumulate the anisotropic, finer two-pcf pair counts
 
 class FinePairs {
-   private:
+   public:
     double* xi;
 
    private:
