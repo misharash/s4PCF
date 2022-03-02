@@ -33,7 +33,7 @@ void compute_pairs(Grid* grid,
         powertime;  // measure the time spent accumulating powers for multipoles
     // We're going to loop only over the non-empty cells.
 
-    long icnt = 0;
+    accpairs.Start();
 
 #ifdef OPENMP
 #pragma omp parallel for schedule(dynamic, 8) reduction(+ : cnt)
@@ -54,8 +54,7 @@ void compute_pairs(Grid* grid,
             printf("# Running single threaded.\n");
 #endif
         if (int(ne % 1000) == 0)
-            printf("Computing cell %d of %d on thread %d\n", ne, grid->nf,
-                   thread);
+            printf("Computing cell %d of %d on thread %d (1st loop)\n", ne, grid->nf, thread);
 
         // Loop over primary cells.
         Cell primary = grid->c[n];
@@ -66,10 +65,18 @@ void compute_pairs(Grid* grid,
         // Now we need to loop over all primary particles in this cell
         for (int j = primary.start; j < primary.start + primary.np; j++) {
             Float primary_w = grid->p[j].w;
+
+            #if (PERIODIC)
+            // do analytic pair counts for random secondary particles, i.e. take limit of their number to infinity
+            for (int bin = 0; bin < NBIN_SHORT; bin++) {
+                Float rmin_bin = rmin_short + bin * (rmax_short - rmin_short) / NBIN_SHORT;
+                Float rmax_bin = rmin_short + (bin + 1) * (rmax_short - rmin_short) / NBIN_SHORT;
+                pairs_i[j].add(bin, primary_w * (grid->sumw_neg) / pow(grid->max_boxsize, 3) * 4 * M_PI / 3 * (pow(rmax_bin, 3) - pow(rmin_bin, 3)));
+            }
+            #endif
+
             // Then loop over secondaries, cell-by-cell
             integer3 delta;
-            if (thread == 0)
-                accpairs.Start();
             for (delta.x = -maxsep_short; delta.x <= maxsep_short; delta.x++)
                 for (delta.y = -maxsep_short; delta.y <= maxsep_short; delta.y++)
                     for (delta.z = -maxsep_short; delta.z <= maxsep_short; delta.z++) {
@@ -83,9 +90,9 @@ void compute_pairs(Grid* grid,
 
                         // Define primary position
                         Float3 ppos = grid->p[j].pos;
-#ifdef PERIODIC
+                        #if PERIODIC
                         ppos -= grid->cell_sep(delta);
-#endif
+                        #endif
 
                         // This is the position of the particle as viewed
                         // from the secondary cell. Now loop over the
@@ -109,20 +116,17 @@ void compute_pairs(Grid* grid,
                             // Find the radial bin
                             int bin = floor((norm2 - rmin_short) / (rmax_short - rmin_short) * NBIN_SHORT);
 
-                            // Define x/r,y/r,z/r
-                            dx = dx / norm2;
-
-                            // continue;   // Skip pairs and multipoles
-
                             // Accumulate the 2-pt correlation function
                             // We include the weight for each pair
-                            pairs_i[j].add(bin, dx.z, grid->p[k].w * primary_w);
-                            pairs[thread].add(bin, dx.z, grid->p[k].w * primary_w);
+                            #if (PERIODIC)
+                            if (grid->p[k].w > 0) // in periodic box, count only secondary data particles, randoms added earlier analytically
+                            #endif
+                            pairs_i[j].add(bin, grid->p[k].w * primary_w);
                             // Exclude self-counts from 3PCF
                             npcf[thread].excl_3pcf(bin, grid->p[k].w * grid->p[k].w * primary_w);
 
                             // Exclude triangular self-counts from 4PCF
-                            #if (!PREVENT_TRIANGLES)
+                            #if (!PREVENT_TRIANGLES && !IGNORE_TRIANGLES)
                             if (rmin_long < 2*rmax_short) {
                                 integer3 delta2;
                                 for (delta2.x = -maxsep_short; delta2.x <= maxsep_short; delta2.x++)
@@ -133,6 +137,18 @@ void compute_pairs(Grid* grid,
                                             if (tmp_test < 0)
                                                 continue;
                                             Cell third = grid->c[tmp_test];
+
+                                            // Define primary position
+                                            Float3 ppos2 = grid->p[j].pos;
+                                            #if PERIODIC
+                                            ppos2 -= grid->cell_sep(delta2);
+                                            #endif
+
+                                            // Define secondary position
+                                            Float3 spos2 = grid->p[k].pos;
+                                            #if PERIODIC
+                                            spos2 -= grid->cell_sep(delta2) - grid->cell_sep(delta);
+                                            #endif
                                             // This is the position of the particle as viewed
                                             // from the secondary cell. Now loop over the
                                             // particles in this secondary cell
@@ -141,9 +157,9 @@ void compute_pairs(Grid* grid,
                                                 // Now we're considering these two particles!
                                                 if ((j==l) || (k==l))
                                                     continue;  // Exclude self-count
-                                                Float3 dx = grid->p[l].pos - ppos;
+                                                Float3 dx = grid->p[l].pos - ppos2;
                                                 Float norm_2 = dx.norm2();
-                                                Float3 dx_l = grid->p[l].pos - grid->p[k].pos;
+                                                Float3 dx_l = grid->p[l].pos - spos2;
                                                 Float norm_l2 = dx_l.norm2();
                                                 // Check if this is in the correct binning
                                                 // ranges
@@ -171,7 +187,7 @@ void compute_pairs(Grid* grid,
                             #endif
 
                             // Exclude triple-side self-counts from 4PCF
-                            #if (!PREVENT_TRIANGLES)
+                            #if (!PREVENT_TRIANGLES && !IGNORE_TRIANGLES)
                             if (rmin_long < rmax_short) {
                                 if (norm2 >= rmax_long2 || norm2 <= rmin_long2)
                                     continue;
@@ -183,13 +199,10 @@ void compute_pairs(Grid* grid,
                     }      // Done with this delta.z loop
             // done with delta.y loop
             // done with delta.x loop
-            if (thread == 0) {
-                accpairs.Stop();
-                powertime.Start();
-            }
+            pairs[thread].sum_power(pairs_i + j);
 
             // Now exclude 4pcf double-side self-counts
-            #if (!PREVENT_TRIANGLES)
+            #if (!PREVENT_TRIANGLES && !IGNORE_TRIANGLES)
             if (rmin_long < rmax_short) {
                 for (delta.x = -maxsep_short; delta.x <= maxsep_short; delta.x++)
                     for (delta.y = -maxsep_short; delta.y <= maxsep_short; delta.y++)
@@ -207,9 +220,9 @@ void compute_pairs(Grid* grid,
 
                             // Define primary position
                             Float3 ppos = grid->p[j].pos;
-#ifdef PERIODIC
+                            #if PERIODIC
                             ppos -= grid->cell_sep(delta);
-#endif
+                            #endif
 
                             // This is the position of the particle as viewed
                             // from the secondary cell. Now loop over the
@@ -251,10 +264,48 @@ void compute_pairs(Grid* grid,
 
             // Now combine pair counts into 3pcf counts
             npcf[thread].add_3pcf(pairs_i + j, primary_w);
+        }  // Done with this primary particle
+
+    }  // Done with this primary cell (first loop), end of omp pragma
+
+    accpairs.Stop();
+
+    // Second loop, to make sure pair counts are ready
+
+    powertime.Start();
+
+#ifdef OPENMP
+#pragma omp parallel for schedule(dynamic, 8) reduction(+ : cnt)
+#endif
+
+    for (ne = 0; ne < grid->nf; ne++) {
+        int n = grid->filled[ne];  // Fetch the cell number
+
+        // Decide which thread we are in
+#ifdef OPENMP
+        int thread = omp_get_thread_num();
+        assert(omp_get_num_threads() <= MAXTHREAD);
+#else
+        int thread = 0;
+#endif
+        if (int(ne % 1000) == 0)
+            printf("Computing cell %d of %d on thread %d (2nd loop)\n", ne, grid->nf,
+                   thread);
+
+        // Loop over primary cells.
+        Cell primary = grid->c[n];
+        integer3 prim_id = grid->cell_id_from_1d(n);
+
+        // continue; // To skip all of the list-building and summations.
+        // Everything else takes negligible time
+        // Now we need to loop over all primary particles in this cell
+        for (int j = primary.start; j < primary.start + primary.np; j++) {
+            Float primary_w = grid->p[j].w;
+            // Then loop over secondaries, cell-by-cell
+            integer3 delta;
 
             // Now combine pair counts into 4pcf counts
 
-            icnt++;
             // This is done on CPU - calculate add_to_power here
             // Acumulate powers here - code in NPCF.h
             for (delta.x = -maxsep_long_or_cf; delta.x <= maxsep_long_or_cf;
@@ -271,17 +322,20 @@ void compute_pairs(Grid* grid,
 
                         // Define primary position
                         Float3 ppos = grid->p[j].pos;
-#ifdef PERIODIC
+                        #if PERIODIC
                         ppos -= grid->cell_sep(delta);
-#endif
+                        #endif
+
+                        int end = sec.start + sec.np; // cell ID to stop the next loop at
+                        if (j < end) end = j; // guarantee k < j to skip self-counts and count each pair only once, spare k < j check inside the loop
 
                         // This is the position of the particle as
                         // viewed from the secondary cell. Now loop over
                         // the particles in this secondary cell
-                        for (int k = sec.start; k < sec.start + sec.np; k++) {
+                        for (int k = sec.start; k < end; k++) {
+                            // end <= j thus k < j
+                            // end <= sec.start + sec.np thus k is in the current cell
                             // Now we're considering these two particles!
-                            if (j <= k)
-                                continue;  // Exclude self-count and secondary points whose pairs have not been computed yet
                             Float3 dx = grid->p[k].pos - ppos;
                             Float norm2 = dx.norm2();
                             // Check if this is in the correct binning ranges
@@ -301,17 +355,31 @@ void compute_pairs(Grid* grid,
                             // Find the fine 2pcf radial bin
                             int bin_cf = floor((norm2 - rmin_cf) / (rmax_cf - rmin_cf) * NBIN_CF);
                             // Accumulate fine 2PCF
+                            #if (PERIODIC)
+                            if ((primary_w > 0) && (grid->p[k].w > 0)) // count only data-data pairs
+                            #endif
                             if ((bin_cf >= 0) && (bin_cf < NBIN_CF)) // if not out of bounds
                                 finepairs[thread].add(bin_cf, dx.z, grid->p[k].w * primary_w);
                         }  // Done with this secondary particle
                     }      // Done with this delta.z loop
                             // done with delta.y loop
             // done with delta.x loop
-            if (thread == 0)
-                powertime.Stop();
         }  // Done with this primary particle
 
-    }  // Done with this primary cell, end of omp pragma
+    }  // Done with this primary cell (second loop), end of omp pragma
+
+    #if (PERIODIC)
+    // do analytical DR and RR counts for finepairs
+    for (int bin = 0; bin < NBIN_CF; bin++) {
+        Float rmin_bin = rmin_cf + bin * (rmax_cf - rmin_cf) / NBIN_CF;
+        Float rmax_bin = rmin_cf + (bin + 1) * (rmax_cf - rmin_cf) / NBIN_CF;
+        Float w_prod = 0.5 * grid->sumw_neg * (2 * grid->sumw_pos + grid->sumw_neg) / pow(grid->max_boxsize, 3) * 4 * M_PI / 3 * (pow(rmax_bin, 3) - pow(rmin_bin, 3)) / MBIN_CF; // product of weights, contribution to a fine 2PCF bin; extra 1/2 because we count only k < j pairs
+        for (int mubin = 0; mubin < MBIN_CF; mubin++) finepairs[0].add_raw(bin, mubin, w_prod);
+    }
+    // add to 0th thread because it always exists
+    #endif
+
+    powertime.Stop();
 
 #ifndef OPENMP
 #ifdef AVX

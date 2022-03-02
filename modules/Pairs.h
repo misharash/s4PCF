@@ -9,9 +9,6 @@ class Pairs {
     double* xi0;
 
    private:
-    double* xi2;
-
-   private:
     double empty[8];  // Just to try to keep the threads from working on similar
                       // memory
 
@@ -20,45 +17,38 @@ class Pairs {
         // Initialize the binning
         int ec = 0;
         ec += posix_memalign((void**)&xi0, PAGE, sizeof(double) * NBIN_SHORT);
-        ec += posix_memalign((void**)&xi2, PAGE, sizeof(double) * NBIN_SHORT);
         assert(ec == 0);
         for (int j = 0; j < NBIN_SHORT; j++) {
             xi0[j] = 0;
-            xi2[j] = 0;
         }
         empty[0] = 0.0;  // To avoid a warning
     }
     ~Pairs() {
         free(xi0);
-        free(xi2);
     }
 
-    inline void load(Float* xi0ptr, Float* xi2ptr) {
+    inline void load(Float* xi0ptr) {
         for (int j = 0; j < NBIN_SHORT; j++) {
             xi0[j] = xi0ptr[j];
-            xi2[j] = xi2ptr[j];
         }
     }
 
-    inline void save(Float* xi0ptr, Float* xi2ptr) {
+    inline void save(Float* xi0ptr) {
         for (int j = 0; j < NBIN_SHORT; j++) {
             xi0ptr[j] = xi0[j];
-            xi2ptr[j] = xi2[j];
         }
     }
 
-    inline void add(int b, Float dz, Float w) {
+    inline void add(int b, Float w) {
         // Add up the weighted pair for the monopole and quadrupole correlation
         // function
         xi0[b] += w;
-        xi2[b] += w * (3.0 * dz * dz - 1) * 0.5;
     }
 
     void sum_power(Pairs* p) {
         // Just add up all of the threaded pairs into the zeroth element
         for (int i = 0; i < NBIN_SHORT; i++) {
             xi0[i] += p->xi0[i];
-            xi2[i] += p->xi2[i];
         }
     }
     //

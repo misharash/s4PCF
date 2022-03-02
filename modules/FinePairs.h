@@ -38,6 +38,11 @@ class FinePairs {
     inline void add(int b, Float dz, Float w) {
         // Add up the weighted pair for the fine anisotropic correlation function
         int mubin = floor(fabs(dz)*MBIN_CF);
+        add_raw(b, mubin, w);
+    }
+    
+    inline void add_raw(int b, int mubin, Float w) {
+        // Add up the weighted pair for the fine anisotropic correlation function
         xi[b * MBIN_CF + mubin] += w;
     }
 

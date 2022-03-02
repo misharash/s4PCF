@@ -86,7 +86,7 @@ void compute_bounding_box(Particle *p, int np, Float3 &rect_boxsize, Float &cell
 
     if (prange.x>0.99*biggest && prange.y>0.99*biggest && prange.z>0.99*biggest) {
         // Probably using a cube of inputs, intended for a periodic box
-#ifndef PERIODIC
+#if (!PERIODIC)
     	fprintf(stderr,"#\n# WARNING: cubic input detected but you have not compiled with PERIODIC flag!\n#\n");
     	printf("#\n# WARNING: cubic input detected but you have not compiled with PERIODIC flag!\n#\n");
         // Do not alter the boxsize here
@@ -95,7 +95,7 @@ void compute_bounding_box(Particle *p, int np, Float3 &rect_boxsize, Float &cell
 #endif
     } else{
         // Probably a non-periodic input (e.g. a real dataset)
-#ifdef PERIODIC
+#if PERIODIC
     	fprintf(stderr,"#\n# WARNING: non-cubic input detected but you have compiled with PERIODIC flag!\n#\n");
     	printf("#\n# WARNING: non-cubic input detected but you have compiled with PERIODIC flag!\n#\n");
 #else
@@ -110,7 +110,7 @@ void compute_bounding_box(Particle *p, int np, Float3 &rect_boxsize, Float &cell
 #endif
     }
 
-#ifdef PERIODIC
+#if PERIODIC
     max_boxsize = rect_boxsize.x;
     cellsize = max_boxsize/nside;
     if (biggest>max_boxsize*1.001)

@@ -212,7 +212,7 @@ class NPCF {
         return;
     }
 
-#if (!PREVENT_TRIANGLES)
+#if (!PREVENT_TRIANGLES && !IGNORE_TRIANGLES)
     inline void excl_4pcf_triangle(int bin_long, int bin, int bin2, Float wprod) {
         // COMPUTE 4PCF CONTRIBUTIONS
 

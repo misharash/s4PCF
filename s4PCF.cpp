@@ -16,17 +16,23 @@
 #include <omp.h>
 #endif
 
+// Whether we are in periodic box
+#define PERIODIC 1
+
 // NBIN is the number of bins we'll sort the radii into.
 #define NBIN_SHORT 10 // short sides
 #define NBIN_LONG 30 // long side
 #define NBIN_CF 500 // fine, anisotropic 2-point correlation function
 // MBIN is number of bins for mu
-#define MBIN_CF 10 // fine, anisotropic 2-point correlation function
+#define MBIN_CF 1 // fine, anisotropic 2-point correlation function
 
 // Whether to exclude bins that can allow triangles (k=l), r_ij<=r_ik+r_jl
 // Beneficial for performance - avoids triple loop
 // Also guarantees no other 4PCF self-counts are involved
 #define PREVENT_TRIANGLES 0
+// Next option does not check any conditions, just disables any self-count exclusion code
+// Thus use with caution, make sure that rmin_long >= 2*rmax_short
+#define IGNORE_TRIANGLES 1
 
 // MAXTHREAD is the maximum number of allowed threads.
 // Big trouble if actual number exceeds this!

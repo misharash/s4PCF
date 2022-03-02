@@ -19,7 +19,7 @@ import numpy as np
 ##################### INPUT PARAMETERS ###################
 
 # Main inputs
-periodic = 0 # whether to run with periodic boundary conditions (should also be set in Makefile)
+periodic = 1 # whether to run with periodic boundary conditions (should also be set in Makefile)
 rmin_short = 0 # minimum radius in Mpc/h
 rmax_short = 30 # maximum radius in Mpc/h
 rmin_long = 60 # minimum long side radius in Mpc/h
@@ -30,7 +30,7 @@ rmax_cf = 300 # maximum fine 2PCF radius in Mpc/h
 # Other inputs
 scale = 1 # rescaling for co-ordinates
 ngrid = 50 # grid size for accelerating pair count
-boxsize = 1000 # only used if periodic=1
+boxsize = 2000 # only used if periodic=1
 
 # File names and directories
 datafilenames = ["qpm_galaxies.xyzwj"] # data filenames
@@ -43,6 +43,7 @@ tmpdir = os.path.join(workdir, "tmp") # temporary directory for intermediate fil
 scriptname = "run_npcf.py"
 
 do_full = 1 # whether do full computation or only combine existing intermediate files
+final_cleanup = 0 # whether to delete directory in the end
 
 ##########################################################
 
@@ -116,7 +117,7 @@ if do_full:
 
 # First do R^N
 # for each random part
-for i in range(Nparts*do_full): # skip if do_full is false
+for i in range(Nparts * do_full * (not periodic)): # skip if do_full is false, or if we are periodic
     # Compute R^N NPCF counts
     print_and_log(f"Starting R[{i}]^N")
     print_and_log(datetime.now())
@@ -160,12 +161,12 @@ for j, datafilename in enumerate(datafilenames*do_full): # skip if do_full is fa
 # We do this in another python script, and perform edge-correction unless the periodic flag is not set
 if periodic:
     print("Combining files together without performing edge-corrections (using analytic R^N counts)")
-    # The script doesn't exist yet
-    os.system(f"python python/combine_files_periodic_new.py {os.path.join(tmpdir, outroot)} {len(datafilenames)} {Nparts} | tee -a {errlog}")
+    # run script, print output to stdout AND append to errlog
+    os.system(f"python python/combine_files_new.py 1 {os.path.join(tmpdir, outroot)} {len(datafilenames)} {Nparts} {boxsize} {rmin_short} {rmax_short} {rmin_long} {rmax_long} {rmin_cf} {rmax_cf} | tee -a {errlog}")
 else:
     print("Combining files together and performing edge-corrections")
     # run script, print output to stdout AND append to errlog
-    os.system(f"python python/combine_files_new.py {os.path.join(tmpdir, outroot)} {len(datafilenames)} {Nparts} | tee -a {errlog}")
+    os.system(f"python python/combine_files_new.py 0 {os.path.join(tmpdir, outroot)} {len(datafilenames)} {Nparts} | tee -a {errlog}")
 
 print_and_log(f"Finished with computation. Placing results into {outdir}/")
 print_log(datetime.now())
@@ -180,4 +181,5 @@ os.chdir(workdir)
 os.system(f"mv {os.path.join(tmpdir, outroot)}.tgz {os.path.join(tmpdir, outroot)}.zeta_*pcf.txt {os.path.normpath(outdir)}/")
 
 # Destroy temporary dir
-os.system(f"rm -rf {tmpdir}")
+if final_cleanup:
+    os.system(f"rm -rf {tmpdir}")

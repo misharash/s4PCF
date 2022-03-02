@@ -230,23 +230,20 @@ public:
         }
     }
 
-    void rel_difference(Integrals* ints, int n_loop, Float &rmsrdC4, Float& maxrdC4){
-        // Add the values accumulated in ints to the corresponding internal sums and compute the Frobenius norm difference between integrals
-        Float n_loops = (Float)n_loop;
-        Float reldiff_c4 = 0;
+    void rel_difference(Integrals* ints, Float &rmsrdC4, Float& maxrdC4){
+        // Add the values accumulated in ints to the corresponding internal sums and compute the relative difference between integrals
+        rmsrdC4 = 0;
         maxrdC4 = 0;
         // Compute Frobenius norms and sum integrals
         for(int i=0; i<N4_used; i++) {
-            Float current_integral_in_bin = c4[i]/n_loops;
-            Float next_integral_in_bin = (c4[i]+ints->c4[i])/(n_loops+1.);
+            Float current_integral_in_bin = c4[i]/norm4[i];
+            Float next_integral_in_bin = (c4[i] + ints->c4[i]) / (norm4[i] + ints->norm4[i]);
             if ((current_integral_in_bin == 0) && (next_integral_in_bin == 0)) continue; // treat 0-0 as zero relative difference, just in case
             Float reldiff_in_bin = current_integral_in_bin/next_integral_in_bin - 1.;
             maxrdC4 = fmax(maxrdC4, fabs(reldiff_in_bin));
-            reldiff_c4 += pow(reldiff_in_bin, 2);
+            rmsrdC4 += pow(reldiff_in_bin, 2);
         }
-        reldiff_c4=sqrt(reldiff_c4/N4_used);
-        // Return percent difference
-        rmsrdC4=100.*reldiff_c4;
+        rmsrdC4 = sqrt(rmsrdC4 / N4_used);
         }
 
     void sum_total_counts(uint64& acc4){
