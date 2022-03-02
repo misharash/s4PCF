@@ -354,12 +354,21 @@ void compute_pairs(Grid* grid,
                                 npcf[thread].add_4pcf(pairs_i + j, pairs_i + k, bin_long);
                             // Find the fine 2pcf radial bin
                             int bin_cf = floor((norm2 - rmin_cf) / (rmax_cf - rmin_cf) * NBIN_CF);
+                            // Get mu
+                            #if (PERIODIC)
+                            Float mu = dx.z; // cos(theta) with respect to z axis
+                            #else
+                            Float3 sumx = grid->p[k].pos + ppos;
+                            Float sumx_norm = sumx.norm();
+                            sumx = sumx / sumx_norm;
+                            Float mu = sumx.dot(dx); // cos(theta) with respect to mean line of sight, to match gs4PCF
+                            #endif
                             // Accumulate fine 2PCF
                             #if (PERIODIC)
                             if ((primary_w > 0) && (grid->p[k].w > 0)) // count only data-data pairs
                             #endif
                             if ((bin_cf >= 0) && (bin_cf < NBIN_CF)) // if not out of bounds
-                                finepairs[thread].add(bin_cf, dx.z, grid->p[k].w * primary_w);
+                                finepairs[thread].add(bin_cf, mu, grid->p[k].w * primary_w);
                         }  // Done with this secondary particle
                     }      // Done with this delta.z loop
                             // done with delta.y loop
