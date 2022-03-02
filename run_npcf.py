@@ -19,7 +19,7 @@ import numpy as np
 ##################### INPUT PARAMETERS ###################
 
 # Main inputs
-periodic = 1 # whether to run with periodic boundary conditions (should also be set in Makefile)
+periodic = 0 # whether to run with periodic boundary conditions (should also be set in Makefile)
 rmin_short = 0 # minimum radius in Mpc/h
 rmax_short = 30 # maximum radius in Mpc/h
 rmin_long = 60 # minimum long side radius in Mpc/h
