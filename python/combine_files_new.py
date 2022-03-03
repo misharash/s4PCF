@@ -21,22 +21,23 @@ else:
 if not periodic and len(sys.argv)!=5:
     raise Exception("In non-periodic case, only need to specify the periodicity (0), input root (base name), number of data and of randoms!")
 
-if periodic and len(sys.argv)!=12:
-    raise Exception("In periodic case, need to specify the periodicity (1), input root (base name), number of data, number of randoms, box size, minimal and maximal short radii, min and max long radii, min and max fine2PCF radii!")
-else:
-    boxsize = float(sys.argv[5])
-    rmin_short = float(sys.argv[6])
-    rmax_short = float(sys.argv[7])
-    rmin_long = float(sys.argv[8])
-    rmax_long = float(sys.argv[9])
-    rmin_cf = float(sys.argv[10])
-    rmax_cf = float(sys.argv[11])
-    # number of galaxies is not needed, since counts are normalized by (sum of positive weights)^-N
-    radius = lambda bin, maxbin, rmin, rmax: rmin + 1.*bin*(rmax-rmin)/(maxbin+1)
-    bin_volume = lambda bin, maxbin, rmin, rmax: boxsize**-3*4.*np.pi/3.*(radius(bin+1,maxbin,rmin,rmax)**3.-radius(bin,maxbin,rmin,rmax)**3.)
-    bin_volume_short = lambda bin, maxbin: bin_volume(bin, maxbin, rmin_short, rmax_short)
-    bin_volume_long = lambda bin, maxbin: bin_volume(bin, maxbin, rmin_long, rmax_long)
-    bin_volume_cf = lambda bin, maxbin: bin_volume(bin, maxbin, rmin_cf, rmax_cf)
+if periodic:
+    if len(sys.argv)!=12:
+        raise Exception("In periodic case, need to specify the periodicity (1), input root (base name), number of data, number of randoms, box size, minimal and maximal short radii, min and max long radii, min and max fine2PCF radii!")
+    else:
+        boxsize = float(sys.argv[5])
+        rmin_short = float(sys.argv[6])
+        rmax_short = float(sys.argv[7])
+        rmin_long = float(sys.argv[8])
+        rmax_long = float(sys.argv[9])
+        rmin_cf = float(sys.argv[10])
+        rmax_cf = float(sys.argv[11])
+        # number of galaxies is not needed, since counts are normalized by (sum of positive weights)^-N
+        radius = lambda bin, maxbin, rmin, rmax: rmin + 1.*bin*(rmax-rmin)/(maxbin+1)
+        bin_volume = lambda bin, maxbin, rmin, rmax: boxsize**-3*4.*np.pi/3.*(radius(bin+1,maxbin,rmin,rmax)**3.-radius(bin,maxbin,rmin,rmax)**3.)
+        bin_volume_short = lambda bin, maxbin: bin_volume(bin, maxbin, rmin_short, rmax_short)
+        bin_volume_long = lambda bin, maxbin: bin_volume(bin, maxbin, rmin_long, rmax_long)
+        bin_volume_cf = lambda bin, maxbin: bin_volume(bin, maxbin, rmin_cf, rmax_cf)
 
 # Decide which N we're using
 Ns = []
