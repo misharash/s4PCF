@@ -21,7 +21,7 @@ public:
 
     // The name of the correlation function file for the first set of particles
 	char *corname = NULL;
-	const char default_corname[500] = "../out1_longer/qpm_galaxies.zeta_fine2pcf.txt";
+	const char default_corname[500] = "../out1_fixed/qpm_galaxies.zeta_fine2pcf.txt";
 
     // Name of the correlation function radial binning .csv file
     char *radial_bin_file_long = NULL;
@@ -36,7 +36,7 @@ public:
 
     // Output directory
     char *out_file = NULL;
-    const char default_out_file[500] = "./out1_longer";
+    const char default_out_file[500] = "./out1_fixed";
 
     // The number of mu bins in the correlation function
     int mbin_cf = 10;
