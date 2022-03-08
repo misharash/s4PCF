@@ -2,7 +2,7 @@
 
 CC = gcc
 CFLAGS = -g -O3 -Wall -MMD
-CXXFLAGS = -DOPENMP -O3 -Wall -MMD -DOPENMP
+CXXFLAGS = -DOPENMP -O3 -Wall -MMD
 
 CXX = g++ -fopenmp -lgomp -std=c++0x -ffast-math
 
