@@ -287,7 +287,7 @@ public:
                 true_xi = true_cf->xi(r_centers[i],mu_centers[j]);
                 // Rescale value
                 new_xi_array[i*mbin+j]=true_xi/full_xi_function.cf_estimate[i*mbin+j]*old_xi;
-                printf("nbin=%d mbin=%d true_xi=%le old_xi=%le new_xi=%le\n", nbin, mbin, true_xi, old_xi, new_xi_array[i*mbin+j]);
+                printf("rbin=%d mubin=%d true_xi=%le old_xi=%le new_xi=%le\n", i, j, true_xi, old_xi, new_xi_array[i*mbin+j]);
             }
         }
 
