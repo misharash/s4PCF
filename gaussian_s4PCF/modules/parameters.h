@@ -36,7 +36,7 @@ public:
 
     // Output directory
     char *out_file = NULL;
-    const char default_out_file[500] = "./out1_fixed";
+    const char default_out_file[500] = "./out1_debug";
 
     // The number of mu bins in the correlation function
     int mbin_cf = 10;
