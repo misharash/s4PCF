@@ -47,7 +47,7 @@ class compute_integral{
         }
 
     public:
-        int draw_particle_without_class(integer3 id_3D, Particle &particle, int &pid, integer3 shift, Grid *grid, int &n_particles, gsl_rng* locrng){
+        int draw_particle_without_class(integer3 id_3D, Particle &particle, int &pid, Float3 shift, Grid *grid, int &n_particles, gsl_rng* locrng){
             // Draw a random particle from a cell given the cell ID.
             // This updates the particle and particle ID and returns 1 if error.
             // This is used for k,l cells (with no indication of particle random class)
