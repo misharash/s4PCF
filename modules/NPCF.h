@@ -183,7 +183,7 @@ class NPCF {
         // Now print the 3PCF
         norm = pow(sumw, -3); // normalize by sum of (positive) weights cubed
         for (int ct = 0; ct < NBIN_LONG * NBIN_SHORT; ct++)
-            fprintf(OutFile, "%le\t", threepcf[ct]*norm);
+            fprintf(OutFile, "%le\t", threepcf_mixed[ct]*norm);
         
         fprintf(OutFile, "\n");
 
