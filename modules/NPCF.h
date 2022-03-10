@@ -8,9 +8,15 @@ class NPCF {
     // bins.
    public:
 
+// Array to hold the long 2PCF
+    Float twopcf_long[NBIN_LONG];
+
 // Array to hold the 3PCF
 #define N3PCF (NBIN_SHORT * (NBIN_SHORT + 1) / 2)  // only compute bin1 <= bin2
     Float threepcf[N3PCF];
+
+// Array to hold the short-long 3PCF
+    Float threepcf_mixed[NBIN_LONG * NBIN_SHORT];
 
 // Sizes of 4pcf array
 #define N4PCF NBIN_LONG* NBIN_SHORT*(NBIN_SHORT + 1) / 2
@@ -27,8 +33,14 @@ class NPCF {
     void reset() {
         // Zero out the array on construction.
 
+        for (int x = 0; x < NBIN_LONG; x++)
+            twopcf_long[x] = 0.0;
+
         for (int x = 0; x < N3PCF; x++)
             threepcf[x] = 0.0;
+
+        for (int x = 0; x < NBIN_LONG * NBIN_SHORT; x++)
+            threepcf_mixed[x] = 0.0;
 
         // Initialize array to zero
         for (int x = 0; x < N4PCF; x++)
@@ -76,8 +88,14 @@ class NPCF {
     void sum_power(NPCF* c) {
         // Just add up all of the threaded power into the zeroth element
 
+        for (int x = 0; x < NBIN_LONG; x++)
+            twopcf_long[x] += c->twopcf_long[x];
+
         for (int x = 0; x < N3PCF; x++)
             threepcf[x] += c->threepcf[x];
+
+        for (int x = 0; x < NBIN_LONG * NBIN_SHORT; x++)
+            threepcf_mixed[x] += c->threepcf_mixed[x];
 
         for (int x = 0; x < N4PCF; x++)
             fourpcf[x] += c->fourpcf[x];
@@ -104,7 +122,7 @@ class NPCF {
         fprintf(OutFile, "## Maximum Radius = %.2e\n", rmax_short);
         fprintf(OutFile,
                 "## Format: Row 1 = radial bin 1, Row 2 = radial bin 2, Row "
-                "3 = zeta_ell^ab\n");
+                "3 = zeta^ab\n");
 
         // First print the indices of the first radial bin
         for (int i = 0; i < NBIN_SHORT; i++) {
@@ -132,7 +150,77 @@ class NPCF {
         // Close open files
         fclose(OutFile);
 
-        printf("3PCF Output saved to %s\n", out_name);
+        printf("3PCF output saved to %s\n", out_name);
+
+        // Save mixed 3PCF
+
+        snprintf(out_name, sizeof out_name, "output/%s_mixed3pcf.txt", out_string);
+        OutFile = fopen(out_name, "w");
+
+        // Print some useful information
+        fprintf(OutFile, "## Short side bins: %d\n", NBIN_SHORT);
+        fprintf(OutFile, "## Long side bins: %d\n", NBIN_LONG);
+        fprintf(OutFile, "## Minimum Radius for long side = %.2e\n", rmin_long);
+        fprintf(OutFile, "## Maximum Radius for long side = %.2e\n", rmax_long);
+        fprintf(OutFile, "## Minimum Radius for short side = %.2e\n", rmin_short);
+        fprintf(OutFile, "## Maximum Radius for short side = %.2e\n", rmax_short);
+        fprintf(OutFile, "## Format: Row 1 = radial bin 1 (long), Row 2 = radial bin 2 (short), Row 3 = zeta^ab\n");
+
+        // First print the indices of the first radial bin
+        for (int i = 0; i < NBIN_LONG; i++) {
+            for (int j = 0; j < NBIN_SHORT; j++)
+                fprintf(OutFile, "%2d\t", i);
+        }
+        fprintf(OutFile, " \n");
+
+        // Print the indices of the second radial bin
+        for (int i = 0; i < NBIN_LONG; i++) {
+            for (int j = 0; j < NBIN_SHORT; j++)
+                fprintf(OutFile, "%2d\t", j);
+        }
+        fprintf(OutFile, "\n");
+
+        // Now print the 3PCF
+        norm = pow(sumw, -3); // normalize by sum of (positive) weights cubed
+        for (int ct = 0; ct < NBIN_LONG * NBIN_SHORT; ct++)
+            fprintf(OutFile, "%le\t", threepcf[ct]*norm);
+        
+        fprintf(OutFile, "\n");
+
+        fflush(NULL);
+
+        // Close open files
+        fclose(OutFile);
+
+        printf("Mixed 3PCF output saved to %s\n", out_name);
+        
+        // Save long 2PCF
+        snprintf(out_name, sizeof out_name, "output/%s_long2pcf.txt", out_string);
+        OutFile = fopen(out_name, "w");
+
+        // Print some useful information
+        fprintf(OutFile, "## Bins: %d\n", NBIN_LONG);
+        fprintf(OutFile, "## Minimum Radius = %.2e\n", rmin_long);
+        fprintf(OutFile, "## Maximum Radius = %.2e\n", rmax_long);
+        fprintf(OutFile, "## Format: Row 1 = radial bin 1, Row 2 = xi^a\n");
+
+        // First print the indices of the first radial bin
+        for (int i = 0; i < NBIN_LONG; i++)
+            fprintf(OutFile, "%2d\t", i);
+        fprintf(OutFile, " \n");
+
+        // Now print the 2PCF
+        norm = pow(sumw, -2); // normalize by sum of (positive) weights squared
+        for (int i = 0; i < NBIN_LONG; i++)
+            fprintf(OutFile, "%le\t", twopcf_long[i]*norm);
+        fprintf(OutFile, "\n");
+
+        fflush(NULL);
+
+        // Close open files
+        fclose(OutFile);
+
+        printf("Long 2PCF output saved to %s\n", out_name);
 
         {
             // SAVE 4PCF
@@ -146,15 +234,11 @@ class NPCF {
             // Print some useful information
             fprintf(OutFile2, "## Short side bins: %d\n", NBIN_SHORT);
             fprintf(OutFile2, "## Long side bins: %d\n", NBIN_LONG);
+            fprintf(OutFile2, "## Minimum Radius for long side = %.2e\n", rmin_long);
+            fprintf(OutFile2, "## Maximum Radius for long side = %.2e\n", rmax_long);
             fprintf(OutFile2, "## Minimum Radius for short side = %.2e\n", rmin_short);
             fprintf(OutFile2, "## Maximum Radius for short side = %.2e\n", rmax_short);
-            fprintf(OutFile2, "## Minimum Radius for long side = %.2e\n",
-                    rmin_long);
-            fprintf(OutFile2, "## Maximum Radius for long side = %.2e\n",
-                    rmax_long);
-            fprintf(OutFile2,
-                    "## Format: Row 1 = radial bin 1 (long side), Row 2 = radial bin 2 (short side), "
-                    "Row 3 = radial bin 3 (short side), Row 4 = zeta_l1l2l3^abc\n");
+            fprintf(OutFile2, "## Format: Row 1 = radial bin 1 (long side), Row 2 = radial bin 2 (short side), Row 3 = radial bin 3 (short side), Row 4 = zeta^abc\n");
 
             // First print the indices of the radial bins
             for (int i = 0; i < N4PCF_used; i++)
@@ -179,7 +263,7 @@ class NPCF {
             // Close open files
             fclose(OutFile2);
 
-            printf("4PCF Output saved to %s\n", out_name2);
+            printf("4PCF output saved to %s\n", out_name2);
         }
     }
 
@@ -198,6 +282,18 @@ class NPCF {
         return;
     }
 
+    inline void add_2pcf_long(int bin_long, Float wprod) {
+        // wprod is galaxy weight product
+
+        // COMPUTE 2PCF CONTRIBUTIONS
+
+        for (int i = 0; i < NBIN_SHORT; i++) {
+            twopcf_long[bin_long] += wprod;
+        }
+
+        return;
+    }
+
     inline void add_3pcf(Pairs* pairs, Float wp) {
         // wp is the primary galaxy weight
 
@@ -212,7 +308,29 @@ class NPCF {
         return;
     }
 
+    inline void add_3pcf_mixed(int bin_long, Pairs* pairs, Float ws) {
+        // ws is the secondary galaxy weight
+
+        // COMPUTE 3PCF CONTRIBUTIONS
+
+        for (int i = 0; i < NBIN_SHORT; i++) {
+            threepcf_mixed[bin_long * NBIN_SHORT + i] += pairs->xi0[i] * ws;
+        }
+
+        return;
+    }
+
 #if (!PREVENT_TRIANGLES && !IGNORE_TRIANGLES)
+    inline void excl_3pcf_mixed(int bin_long, int bin, Float wprod) {
+        // wprod is product of weights
+
+        // delete 3PCF self-count
+
+        threepcf[bin_long * NBIN_SHORT + bin] -= wprod;
+
+        return;
+    }
+
     inline void excl_4pcf_triangle(int bin_long, int bin, int bin2, Float wprod) {
         // COMPUTE 4PCF CONTRIBUTIONS
 

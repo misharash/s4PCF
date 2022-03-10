@@ -41,7 +41,7 @@ if periodic:
 
 # Decide which N we're using
 Ns = []
-for N in ["2", "3", "4", "fine2"]:
+for N in ["2", "3", "4", "fine2", "long2", "mixed3"]:
     DmR_file = inroot+'.0.n0_%spcf.txt'%N # DmR file exists in any case
     if os.path.exists(DmR_file):
         Ns.append(N)
@@ -50,7 +50,8 @@ if len(Ns)==0:
     raise Exception("No files found with input string %s.0.n0"%inroot)
 
 for N in Ns:
-    n = int(N[-1]) # same as N for 2,3,4; 2 for fine2
+    n = int(N[-1]) # same as N for 2,3,4; 2 for fine2 and long2; 3 for mixed3
+    rows_to_skip = (N == "fine2") # skip additional row for fine2PCF only
     
     if periodic:
         DmR_file = inroot+'.0.n0_%spcf.txt'%N
@@ -61,8 +62,12 @@ for N in Ns:
             countsR = 0.5 * bin_volume_cf(bins, np.max(bins)) / n_mu # factor of 1/2 because we count only i > j pairs for fine2pcf
         elif N == "2":
             countsR = bin_volume_short(bins, np.max(bins))
+        elif N == "long2":
+            countsR = 0.5 * bin_volume_long(bins, np.max(bins)) # factor of 1/2 because we count only i > j pairs for long2pcf
         elif N == "3":
             countsR = bin_volume_short(bins[0], np.max(bins)) * bin_volume_short(bins[1], np.max(bins))
+        elif N == "mixed3":
+            countsR = bin_volume_long(bins[0], np.max(bins[0])) * bin_volume_short(bins[1], np.max(bins[1]))
         elif N == "4":
             countsR = bin_volume_long(bins[0], np.max(bins[0])) * bin_volume_short(bins[1], np.max(bins[1:])) * bin_volume_short(bins[2], np.max(bins[1:]))
         else: # should never reach this
@@ -73,7 +78,7 @@ for N in Ns:
         for i in range(Nrandoms):
             R_file = inroot+'.r%d_%spcf.txt'%(i, N)
             # Extract counts
-            countsR_all.append(np.loadtxt(R_file, skiprows=(len(N)>1), ndmin=2)[n-1:]) # skipping rows with radial bins, skip 1 more row for fine2
+            countsR_all.append(np.loadtxt(R_file, skiprows=rows_to_skip, ndmin=2)[n-1:]) # skipping rows with radial bins, skip 1 more row for fine2
         countsR_all = np.asarray(countsR_all)
         countsR = np.mean(countsR_all,axis=0)
 
@@ -87,7 +92,7 @@ for N in Ns:
             for i in range(Nrandoms):
                 DmR_file = inroot+'.%d.n%d_%spcf.txt'%(j, i, N)
                 # Extract counts
-                countsN_all.append(np.loadtxt(DmR_file, skiprows=(len(N)>1), ndmin=2)[n-1:]) # skipping rows with radial bins, skip 1 more row for fine2
+                countsN_all.append(np.loadtxt(DmR_file, skiprows=rows_to_skip, ndmin=2)[n-1:]) # skipping rows with radial bins, skip 1 more row for fine2
             countsN_all = np.asarray(countsN_all)
             countsN = np.mean(countsN_all,axis=0)
             countsN_alldata.append(countsN)

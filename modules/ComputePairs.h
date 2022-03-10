@@ -350,8 +350,18 @@ void compute_pairs(Grid* grid,
                             // Find the long radial bin
                             int bin_long = floor((norm2 - rmin_long) / (rmax_long - rmin_long) * NBIN_LONG);
                             // Accumulate the 4-pt correlation function
-                            if ((bin_long >= 0) && (bin_long < NBIN_LONG)) // if not out of bounds
+                            if ((bin_long >= 0) && (bin_long < NBIN_LONG)) { // if not out of bounds
                                 npcf[thread].add_4pcf(pairs_i + j, pairs_i + k, bin_long);
+                                npcf[thread].add_2pcf_long(bin_long, primary_w * grid->p[k].w);
+                                npcf[thread].add_3pcf_mixed(bin_long, pairs_i + j, grid->p[k].w);
+                                npcf[thread].add_3pcf_mixed(bin_long, pairs_i + k, primary_w); // switch primary and secondary
+                                #if (!PREVENT_TRIANGLES && !IGNORE_TRIANGLES)
+                                int bin_short = floor((norm2 - rmin_short) / (rmax_short - rmin_short) * NBIN_SHORT);
+                                if ((bin_short >= 0) && (bin_short < NBIN_SHORT))
+                                    npcf[thread].excl_3pcf_mixed(bin_long, bin_short, primary_w * grid->p[k].w * (primary_w + grid->p[k].w));
+                                    // deal with jkj and kjk pseudo-triplets at once
+                                #endif
+                            }
                             // Find the fine 2pcf radial bin
                             int bin_cf = floor((norm2 - rmin_cf) / (rmax_cf - rmin_cf) * NBIN_CF);
                             // Get mu
