@@ -205,7 +205,7 @@ class NPCF {
 
         for (int i = 0, ct = 0; i < NBIN_SHORT; i++) {
             for (int j = i; j < NBIN_SHORT; j++, ct++) {
-                threepcf[ct] = pairs->xi0[i] * pairs->xi0[j] / wp;
+                threepcf[ct] += pairs->xi0[i] * pairs->xi0[j] / wp;
             }
         }
 
