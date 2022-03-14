@@ -349,18 +349,24 @@ void compute_pairs(Grid* grid,
                             dx = dx / norm2; // normalize coordinate difference
                             // Find the long radial bin
                             int bin_long = floor((norm2 - rmin_long) / (rmax_long - rmin_long) * NBIN_LONG);
-                            // Accumulate the 4-pt correlation function
                             if ((bin_long >= 0) && (bin_long < NBIN_LONG)) { // if not out of bounds
+                                // Accumulate the 4-pt correlation function
                                 npcf[thread].add_4pcf(pairs_i + j, pairs_i + k, bin_long);
-                                npcf[thread].add_2pcf_long(bin_long, primary_w * grid->p[k].w);
+                                // Accumulate the mixed 3-pt correlation function
                                 npcf[thread].add_3pcf_mixed(bin_long, pairs_i + j, grid->p[k].w);
                                 npcf[thread].add_3pcf_mixed(bin_long, pairs_i + k, primary_w); // switch primary and secondary
                                 #if (!PREVENT_TRIANGLES && !IGNORE_TRIANGLES)
+                                // Exclude the mixed 3-pt correlation function self-counts
                                 int bin_short = floor((norm2 - rmin_short) / (rmax_short - rmin_short) * NBIN_SHORT);
                                 if ((bin_short >= 0) && (bin_short < NBIN_SHORT))
                                     npcf[thread].excl_3pcf_mixed(bin_long, bin_short, primary_w * grid->p[k].w * (primary_w + grid->p[k].w));
                                     // deal with jkj and kjk pseudo-triplets at once
                                 #endif
+                                // Accumulate long 2PCF
+                                #if (PERIODIC)
+                                if ((primary_w > 0) && (grid->p[k].w > 0)) // count only data-data pairs for 2PCF
+                                #endif
+                                npcf[thread].add_2pcf_long(bin_long, primary_w * grid->p[k].w);
                             }
                             // Find the fine 2pcf radial bin
                             int bin_cf = floor((norm2 - rmin_cf) / (rmax_cf - rmin_cf) * NBIN_CF);
@@ -375,7 +381,7 @@ void compute_pairs(Grid* grid,
                             #endif
                             // Accumulate fine 2PCF
                             #if (PERIODIC)
-                            if ((primary_w > 0) && (grid->p[k].w > 0)) // count only data-data pairs
+                            if ((primary_w > 0) && (grid->p[k].w > 0)) // count only data-data pairs for 2PCF
                             #endif
                             if ((bin_cf >= 0) && (bin_cf < NBIN_CF)) // if not out of bounds
                                 finepairs[thread].add(bin_cf, mu, grid->p[k].w * primary_w);
@@ -388,14 +394,20 @@ void compute_pairs(Grid* grid,
     }  // Done with this primary cell (second loop), end of omp pragma
 
     #if (PERIODIC)
-    // do analytical DR and RR counts for finepairs
+    // do analytical DR and RR counts for fine pairs
     for (int bin = 0; bin < NBIN_CF; bin++) {
         Float rmin_bin = rmin_cf + bin * (rmax_cf - rmin_cf) / NBIN_CF;
         Float rmax_bin = rmin_cf + (bin + 1) * (rmax_cf - rmin_cf) / NBIN_CF;
         Float w_prod = 0.5 * grid->sumw_neg * (2 * grid->sumw_pos + grid->sumw_neg) / pow(grid->max_boxsize, 3) * 4 * M_PI / 3 * (pow(rmax_bin, 3) - pow(rmin_bin, 3)) / MBIN_CF; // product of weights, contribution to a fine 2PCF bin; extra 1/2 because we count only k < j pairs
-        for (int mubin = 0; mubin < MBIN_CF; mubin++) finepairs[0].add_raw(bin, mubin, w_prod);
+        for (int mubin = 0; mubin < MBIN_CF; mubin++) finepairs[0].add_raw(bin, mubin, w_prod); // add for each mu bin; to 0th thread because it always exists
     }
-    // add to 0th thread because it always exists
+    // do analytical DR and RR counts for long pairs
+    for (int bin = 0; bin < NBIN_LONG; bin++) {
+        Float rmin_bin = rmin_long + bin * (rmax_long - rmin_long) / NBIN_LONG;
+        Float rmax_bin = rmin_long + (bin + 1) * (rmax_long - rmin_long) / NBIN_LONG;
+        Float w_prod = 0.5 * grid->sumw_neg * (2 * grid->sumw_pos + grid->sumw_neg) / pow(grid->max_boxsize, 3) * 4 * M_PI / 3 * (pow(rmax_bin, 3) - pow(rmin_bin, 3)); // product of weights, contribution to a long 2PCF bin; extra 1/2 because we count only k < j pairs
+        npcf[0].add_2pcf_long(bin, w_prod); // add to 0th thread because it always exists
+    }
     #endif
 
     powertime.Stop();
