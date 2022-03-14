@@ -287,9 +287,7 @@ class NPCF {
 
         // COMPUTE 2PCF CONTRIBUTIONS
 
-        for (int i = 0; i < NBIN_SHORT; i++) {
-            twopcf_long[bin_long] += wprod;
-        }
+        twopcf_long[bin_long] += wprod;
 
         return;
     }
