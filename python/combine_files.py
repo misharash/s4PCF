@@ -103,7 +103,7 @@ for N in Ns:
     # copy comments and bins from first random file
     lnc = 0 # counter of lines that are not comments
     for line in rfile:
-        if lnc >= n-1+(len(N)>1): break # only need N-1 data lines (2 for fine2PCF), i.e. radial bins, can terminate loop afterwards
+        if lnc >= n-1+rows_to_skip: break # only need n-1 data lines (but 2 for fine2PCF), i.e. radial bins, can terminate loop afterwards
         if line[0] != "#": lnc += 1
         zfile.write(line)
     rfile.close()
