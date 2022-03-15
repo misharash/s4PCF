@@ -360,7 +360,7 @@ class NPCF {
     }
 #endif
 
-    inline void add_4pcf(Pairs* pair1, Pairs* pair2, int bin_long) {
+    inline void add_4pcf(int bin_long, Pairs* pair1, Pairs* pair2) {
         // COMPUTE 4PCF CONTRIBUTIONS
 
         // Iterate over second bin

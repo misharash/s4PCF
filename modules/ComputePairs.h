@@ -351,7 +351,7 @@ void compute_pairs(Grid* grid,
                             int bin_long = floor((norm2 - rmin_long) / (rmax_long - rmin_long) * NBIN_LONG);
                             if ((bin_long >= 0) && (bin_long < NBIN_LONG)) { // if not out of bounds
                                 // Accumulate the 4-pt correlation function
-                                npcf[thread].add_4pcf(pairs_i + j, pairs_i + k, bin_long);
+                                npcf[thread].add_4pcf(bin_long, pairs_i + j, pairs_i + k);
                                 // Accumulate the mixed 3-pt correlation function
                                 npcf[thread].add_3pcf_mixed(bin_long, pairs_i + j, grid->p[k].w);
                                 npcf[thread].add_3pcf_mixed(bin_long, pairs_i + k, primary_w); // switch primary and secondary
