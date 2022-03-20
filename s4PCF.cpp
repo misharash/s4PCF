@@ -20,9 +20,9 @@
 #define PERIODIC 1
 
 // NBIN is the number of bins we'll sort the radii into.
-#define NBIN_SHORT 10 // short sides
-#define NBIN_LONG 30 // long side
-#define NBIN_CF 500 // fine, anisotropic 2-point correlation function
+#define NBIN_SHORT 13 // short sides
+#define NBIN_LONG 27 // long side
+#define NBIN_CF 530 // fine, anisotropic 2-point correlation function
 // MBIN is number of bins for mu
 #define MBIN_CF 1 // fine, anisotropic 2-point correlation function
 
