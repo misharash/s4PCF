@@ -1,5 +1,5 @@
-### nbody_to_xyzw.py (Michael Rashkovetskyi, with the help of Boryana Hadzhiyska, 2022)
-# This reads an ECSV file (as at least in AbacusSummit mocks) and conerts it to xyzw plain text format assumed by s4PCF code & running script
+### nbody_to_xyzw_realspace.py (Michael Rashkovetskyi, with the help of Boryana Hadzhiyska, 2022)
+# This reads an ECSV file (as at least in AbacusSummit mocks) and converts it to xyzw plain text format assumed by s4PCF code & running script
 # Output contains real-space (not redshift-space) coordinates
 
 import sys
