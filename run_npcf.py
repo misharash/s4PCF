@@ -33,12 +33,12 @@ ngrid = 50 # grid size for accelerating pair count
 boxsize = 2000 # only used if periodic=1
 
 # File names and directories
-datafilenames = ["ELGs.xyzw"] # data filenames
-randomfilename = "ELG_randoms.xyzw" # random filename
-outroot = "AbacusSummit_mocks_ELG1" # base name for outputs
+datafilenames = ["AbacusSummit_base_c000_ph000_LRG.xyzw"] # data filenames
+randomfilename = "LRG_randoms.xyzw" # random filename
+outroot = "AbacusSummit_base_c000_ph000_LRG" # base name for outputs
 workdir = os.getcwd()
 indir = workdir # input directory (see above for required contents)
-outdir = os.path.join(workdir, "out_periodic4") # output file directory
+outdir = os.path.join(workdir, "out_periodic5") # output file directory
 tmpdir = os.path.join(workdir, "tmp") # temporary directory for intermediate file storage for this run (ideally somewhere with fast I/O)
 scriptname = "run_npcf.py"
 
