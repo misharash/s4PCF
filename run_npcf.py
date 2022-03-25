@@ -169,7 +169,7 @@ else:
     os.system(f"python python/combine_files_new.py 0 {os.path.join(tmpdir, outroot)} {len(datafilenames)} {Nparts} | tee -a {errlog}")
 
 print_and_log(f"Finished with computation. Placing results into {outdir}/")
-print_log(datetime.now())
+print_and_log(datetime.now())
 os.chdir(tmpdir)
 os.system(f"ls -l >> {errlog}") # list tmpdir contents
 # finished writing log, now copy it to tmpdir, we are in it now
