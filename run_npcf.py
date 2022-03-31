@@ -156,6 +156,7 @@ for j, datafilename in enumerate(datafilenames*do_full): # skip if do_full is fa
         print_and_log(f"Done with (D[{j}]-R[{i}])^N")
     # end for each random part
 # end for each data file
+print_and_log(datetime.now())
 
 # Now need to combine the files to get the full NPCF estimate
 # We do this in another python script, and perform edge-correction unless the periodic flag is not set
