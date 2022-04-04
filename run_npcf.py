@@ -119,7 +119,7 @@ if do_full:
     if periodic:
         # create random points
         print_and_log(f"Generating {Nrandoms} random points")
-        random_contents = np.append(np.random.rand(N, 3) * boxsize, -np.ones((Nrandoms, 1)), axis=1)
+        random_contents = np.append(np.random.rand(Nrandoms, 3) * boxsize, -np.ones((Nrandoms, 1)), axis=1)
         # 3 columns of random coordinates within [0, boxsize] and one of weights, all equal to -1
         print_and_log(f"Generated {Nrandoms} random points")
     else:
