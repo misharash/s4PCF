@@ -34,7 +34,10 @@ boxsize = 2000 # only used if periodic=1
 
 # File names and directories
 datafilenames = ["AbacusSummit_base_c000_ph000_LRG.xyzw"] # data filenames
-randomfilename = "LRG_randoms.xyzw" # random filename
+if periodic:
+    Nparts = 5 # set Nrandoms/Ndata
+else:
+    randomfilename = "LRG_randoms.xyzw" # random filename
 outroot = "AbacusSummit_base_c000_ph000_LRG" # base name for outputs
 workdir = os.getcwd()
 indir = workdir # input directory (see above for required contents)
@@ -90,11 +93,17 @@ count_lines = lambda fname: sum(1 for _ in open(os.path.join(indir, fname)))
 
 Ngals = [count_lines(fname) for fname in datafilenames]
 print_and_log(f"Number of points in data file(s): {Ngals}")
-Nrandoms = count_lines(randomfilename)
-print_and_log(f"Number of points in random file: {Nrandoms}")
 
 Ngal_avg = sum(Ngals)/len(Ngals)
-Nparts = int(np.ceil(Nrandoms/Ngal_avg))
+Ngal_avg_ceil = int(np.ceil(Ngal_avg))
+
+if periodic:
+    Nrandoms = Ngal_avg_ceil * Nparts # fixed number times average data count
+else:
+    Nrandoms = count_lines(randomfilename)
+    print_and_log(f"Number of points in random file: {Nrandoms}")
+    Nparts = int(np.ceil(Nrandoms/Ngal_avg)) # override Nparts
+# in periodic case Nparts remains as set above
 print_and_log(f"Divide randoms to {Nparts} part(s)")
 
 if do_full:
@@ -103,17 +112,24 @@ if do_full:
     # first decide indices
     print("Creating random indices")
     random_indices = np.arange(Nrandoms)
-    if Nparts>1:
+    if not periodic and Nparts>1: # only shuffle in aperiodic case with more than 1 part
         np.random.shuffle(random_indices)
     random_parts_indices = [random_indices[i::Nparts] for i in range(Nparts)]
     print("Created random indices")
-    # now read contents
-    print_and_log(f"Reading random file {randomfilename}")
-    print_and_log(datetime.now())
-    random_contents = np.loadtxt(os.path.join(indir, randomfilename), usecols=range(4))
-    # use only X, Y, Z coords and weights (4 first columns), consistently with data reading
-    print_and_log(f"Read random file {randomfilename}")
-    random_contents[:, 3] *= -1 # negate the weights
+    if periodic:
+        # create random points
+        print_and_log(f"Generating {Nrandoms} random points")
+        random_contents = np.append(np.random.rand(N, 3) * boxsize, -np.ones((Nrandoms, 1)), axis=1)
+        # 3 columns of random coordinates within [0, boxsize] and one of weights, all equal to -1
+        print_and_log(f"Generated {Nrandoms} random points")
+    else:
+        # read contents of random file
+        print_and_log(f"Reading random file {randomfilename}")
+        print_and_log(datetime.now())
+        random_contents = np.loadtxt(os.path.join(indir, randomfilename), usecols=range(4))
+        # use only X, Y, Z coords and weights (4 first columns), consistently with data reading
+        print_and_log(f"Read random file {randomfilename}")
+        random_contents[:, 3] *= -1 # negate the weights
 
 # First do R^N
 # for each random part
